@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fantasy-football
+  labels:
+    app: fantasy-football
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fantasy-football
+  template:
+    metadata:
+      labels:
+        app: fantasy-football
+    spec:
+      containers:
+        - name: fantasy-football
+          image: fantasy-football:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 5000
+          env:
+            - name: ESPN_LEAGUE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: fantasy-football-secret
+                  key: ESPN_LEAGUE_ID
+            - name: ESPN_YEAR
+              valueFrom:
+                secretKeyRef:
+                  name: fantasy-football-secret
+                  key: ESPN_YEAR
+            - name: ESPN_S2
+              valueFrom:
+                secretKeyRef:
+                  name: fantasy-football-secret
+                  key: ESPN_S2
+            - name: ESPN_SWID
+              valueFrom:
+                secretKeyRef:
+                  name: fantasy-football-secret
+                  key: ESPN_SWID

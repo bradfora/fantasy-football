@@ -1,0 +1,15 @@
+.venv
+.git
+.env
+__pycache__
+.idea
+.pytest_cache
+*.pyc
+.gitignore
+.dockerignore
+PLAN.md
+TODO.txt
+PROGRESS.md
+HANDOFF.md
+test_app.py
+requirements-dev.txt

@@ -272,7 +272,7 @@ class TestRosterRoute:
         html = response.data.decode()
         qb_pos = html.index("Patrick Mahomes")
         rb_pos = html.index("Derrick Henry")
-        wr_pos = html.index("JaMarr Chase")
+        wr_pos = html.index("Ja&#39;Marr Chase")
         te_pos = html.index("Travis Kelce")
         flex_pos = html.index("Flex Guy")
         k_pos = html.index("Tyler Bass")

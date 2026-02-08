@@ -7,14 +7,14 @@ A Flask webapp that connects to ESPN Fantasy Football via the [`espn-api`](https
 - Python 3.9+
 - An ESPN Fantasy Football league (private leagues require authentication cookies)
 
-## Setup
+## Setup (Local Development)
 
 1. **Create a virtual environment and install dependencies:**
 
    ```bash
    python -m venv .venv
    source .venv/bin/activate
-   pip install flask espn-api python-dotenv
+   pip install -r requirements-dev.txt
    ```
 
 2. **Configure environment variables:**
@@ -33,14 +33,100 @@ A Flask webapp that connects to ESPN Fantasy Football via the [`espn-api`](https
 
    The app starts at `http://127.0.0.1:5000` with debug mode enabled.
 
+## Running with Docker
+
+1. **Build the image:**
+
+   ```bash
+   docker build -t fantasy-football:latest .
+   ```
+
+2. **Run the container:**
+
+   ```bash
+   docker run --env-file .env -p 5000:5000 fantasy-football:latest
+   ```
+
+3. Access the app at `http://localhost:5000`.
+
+## Running with Docker Compose
+
+1. **Start the app:**
+
+   ```bash
+   docker compose up --build
+   ```
+
+2. Access the app at `http://localhost:5000`.
+
+3. **Stop the app:**
+
+   ```bash
+   docker compose down
+   ```
+
+## Running with Kubernetes (Docker Desktop)
+
+### Prerequisites
+
+- Docker Desktop for Mac with Kubernetes enabled (Settings > Kubernetes > Enable Kubernetes)
+
+### Steps
+
+1. **Build the Docker image** (Kubernetes uses the local Docker image):
+
+   ```bash
+   docker build -t fantasy-football:latest .
+   ```
+
+2. **Create your secret from the example template:**
+
+   ```bash
+   cp k8s/secret.yaml.example k8s/secret.yaml
+   ```
+
+   Edit `k8s/secret.yaml` with your real ESPN credentials.
+
+3. **Apply the Kubernetes configurations:**
+
+   ```bash
+   kubectl apply -f k8s/secret.yaml
+   kubectl apply -f k8s/deployment.yaml
+   kubectl apply -f k8s/service.yaml
+   ```
+
+4. **Verify the pod is running:**
+
+   ```bash
+   kubectl get pods -l app=fantasy-football
+   ```
+
+5. Access the app at `http://localhost:30500`.
+
+### Teardown
+
+```bash
+kubectl delete -f k8s/service.yaml
+kubectl delete -f k8s/deployment.yaml
+kubectl delete -f k8s/secret.yaml
+```
+
 ## Project Structure
 
 ```
 .
 ├── app.py              # Flask application (routes, helpers)
 ├── test_app.py         # Test suite (34 tests)
+├── requirements.txt    # Production dependencies
+├── requirements-dev.txt # Dev dependencies (includes pytest)
+├── Dockerfile          # Container image definition
+├── docker-compose.yaml # Docker Compose configuration
 ├── .env.example        # Template for required environment variables
 ├── .env                # Your credentials (git-ignored)
+├── k8s/                # Kubernetes configurations
+│   ├── deployment.yaml # App deployment (single replica)
+│   ├── service.yaml    # NodePort service (port 30500)
+│   └── secret.yaml.example # Template for ESPN credentials
 ├── templates/
 │   ├── base.html       # Shared layout, CSS, nav
 │   ├── teams.html      # League standings page
@@ -69,7 +155,7 @@ Starters are sorted in this order: QB, RB, WR, TE, FLEX, K, D/ST.
 ## Tests
 
 ```bash
-pip install pytest
+pip install -r requirements-dev.txt
 python -m pytest test_app.py -v
 ```
 
