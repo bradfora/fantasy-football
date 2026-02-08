@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}{{ team.team_name }}{% endblock %}
+{% block content %}
+<a href="/" class="back-link">&larr; Back to standings</a>
+
+<div class="page-header" style="display:flex; align-items:center; gap:1rem;">
+    <img class="team-logo" src="{{ team.logo_url }}" alt="" style="width:56px; height:56px; border-radius:14px;">
+    <div>
+        <h2>{{ team.team_name }}</h2>
+        <p class="subtitle">
+            <span class="stat-pill">{{ team.wins }}-{{ team.losses }}{% if team.ties %}-{{ team.ties }}{% endif %}</span>
+            &nbsp;{{ "%.1f"|format(team.points_for) }} PF
+            &middot; {{ "%.1f"|format(team.points_against) }} PA
+            &middot; #{{ team.standing }} overall
+        </p>
+    </div>
+</div>
+
+{% macro player_table(players, show_slot) %}
+<table>
+    <thead>
+        <tr>
+            {% if show_slot %}<th style="width:60px">Slot</th>{% endif %}
+            <th>Player</th>
+            <th>Pos</th>
+            <th>NFL Team</th>
+            <th style="text-align:right">Total Pts</th>
+            <th style="text-align:right">Avg Pts</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for player in players %}
+        <tr>
+            {% if show_slot %}
+            <td><span class="slot-badge">{{ display_slot(player.lineupSlot) }}</span></td>
+            {% endif %}
+            <td>
+                <span class="player-name">{{ player.name }}</span>
+                {% if player.injuryStatus and player.injuryStatus not in ("ACTIVE", "NORMAL") %}
+                    <span class="injury-badge injury-{{ player.injuryStatus }} {% if player.injuryStatus not in ('OUT','DOUBTFUL','QUESTIONABLE','PROBABLE') %}injury-default{% endif %}">
+                        {{ player.injuryStatus }}
+                    </span>
+                {% endif %}
+            </td>
+            <td><span class="pro-team">{{ player.position }}</span></td>
+            <td><span class="pro-team">{{ player.proTeam }}</span></td>
+            <td style="text-align:right">
+                <span class="pts {% if player.total_points > 100 %}pts-high{% endif %}">
+                    {{ "%.1f"|format(player.total_points) }}
+                </span>
+            </td>
+            <td style="text-align:right">{{ "%.1f"|format(player.avg_points) }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endmacro %}
+
+{% if starters %}
+<div class="card">
+    <div class="card-header">
+        Starters
+        <span class="badge">{{ starters|length }}</span>
+    </div>
+    {{ player_table(starters, true) }}
+</div>
+{% endif %}
+
+{% if bench %}
+<div class="card">
+    <div class="card-header">
+        Bench
+        <span class="badge">{{ bench|length }}</span>
+    </div>
+    {{ player_table(bench, false) }}
+</div>
+{% endif %}
+
+{% if ir %}
+<div class="card">
+    <div class="card-header">
+        Injured Reserve
+        <span class="badge">{{ ir|length }}</span>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Player</th>
+                <th>Pos</th>
+                <th>NFL Team</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for player in ir %}
+            <tr>
+                <td><span class="player-name">{{ player.name }}</span></td>
+                <td><span class="pro-team">{{ player.position }}</span></td>
+                <td><span class="pro-team">{{ player.proTeam }}</span></td>
+                <td>
+                    <span class="injury-badge injury-{{ player.injuryStatus }} {% if player.injuryStatus not in ('OUT','DOUBTFUL','QUESTIONABLE','PROBABLE') %}injury-default{% endif %}">
+                        {{ player.injuryStatus }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

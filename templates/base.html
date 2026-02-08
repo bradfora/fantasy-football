@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Fantasy Football{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f0f2f5;
+            color: #2d3436;
+            line-height: 1.5;
+        }
+
+        nav {
+            background: #fff;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        nav .logo-icon {
+            font-size: 1.6rem;
+        }
+        nav a {
+            color: #2d3436;
+            text-decoration: none;
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+        nav a:hover { color: #6c5ce7; }
+
+        .container {
+            max-width: 980px;
+            margin: 2rem auto;
+            padding: 0 1.25rem;
+        }
+
+        .page-header {
+            margin-bottom: 1.5rem;
+        }
+        .page-header h2 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #2d3436;
+        }
+        .page-header .subtitle {
+            color: #636e72;
+            font-size: 0.95rem;
+            margin-top: 0.2rem;
+        }
+
+        /* Cards */
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+        .card-header {
+            padding: 1rem 1.25rem;
+            font-weight: 700;
+            font-size: 1rem;
+            border-bottom: 2px solid #f0f2f5;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .card-header .badge {
+            background: #dfe6e9;
+            color: #636e72;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.15rem 0.55rem;
+            border-radius: 99px;
+        }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left;
+            padding: 0.65rem 1.25rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #b2bec3;
+            background: #fafafa;
+        }
+        td {
+            padding: 0.7rem 1.25rem;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #f0f2f5;
+        }
+        tr:last-child td { border-bottom: none; }
+        tbody tr { transition: background 0.15s; }
+        tbody tr:hover td { background: #f8f9ff; }
+
+        /* Links */
+        a { color: #6c5ce7; text-decoration: none; font-weight: 600; }
+        a:hover { color: #5a4bd1; text-decoration: underline; }
+
+        /* Team row */
+        .team-cell {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .team-logo {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            object-fit: contain;
+            background: #f0f2f5;
+            padding: 3px;
+        }
+        .team-name { font-weight: 700; }
+
+        /* Rank badge */
+        .rank {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 0.8rem;
+        }
+        .rank-1 { background: #ffeaa7; color: #b8860b; }
+        .rank-2 { background: #dfe6e9; color: #636e72; }
+        .rank-3 { background: #fde0d0; color: #b35a2a; }
+        .rank-default { background: #f0f2f5; color: #636e72; }
+
+        /* Stat pill */
+        .stat-pill {
+            display: inline-block;
+            background: #f0f2f5;
+            padding: 0.2rem 0.6rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        /* Record display */
+        .record-text {
+            color: #636e72;
+            font-size: 0.9rem;
+        }
+
+        /* Player row */
+        .player-name { font-weight: 700; }
+        .slot-badge {
+            display: inline-block;
+            background: #dfe6e9;
+            color: #636e72;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+        .injury-badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 6px;
+        }
+        .injury-OUT { background: #ffe0e0; color: #c0392b; }
+        .injury-DOUBTFUL { background: #ffe0e0; color: #c0392b; }
+        .injury-QUESTIONABLE { background: #fff3cd; color: #856404; }
+        .injury-PROBABLE { background: #d4edda; color: #155724; }
+        .injury-default { background: #fff3cd; color: #856404; }
+
+        .pro-team {
+            color: #b2bec3;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        /* Back link */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        /* Points highlight */
+        .pts { font-weight: 700; }
+        .pts-high { color: #00b894; }
+    </style>
+</head>
+<body>
+    <nav>
+        <span class="logo-icon">🏈</span>
+        <a href="/">Fantasy Football Analyzer</a>
+    </nav>
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

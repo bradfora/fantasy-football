@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}League Standings{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>League Standings</h2>
+    <p class="subtitle">{{ teams|length }} teams &middot; {{ teams[0].wins + teams[0].losses + teams[0].ties }} games played</p>
+</div>
+
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th style="width:50px">Rank</th>
+                <th>Team</th>
+                <th>Record</th>
+                <th style="text-align:right">Pts For</th>
+                <th style="text-align:right">Pts Against</th>
+                <th style="text-align:right">Streak</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for team in teams %}
+            <tr>
+                <td>
+                    <span class="rank {% if team.standing == 1 %}rank-1{% elif team.standing == 2 %}rank-2{% elif team.standing == 3 %}rank-3{% else %}rank-default{% endif %}">
+                        {{ team.standing }}
+                    </span>
+                </td>
+                <td>
+                    <a href="/team/{{ team.team_id }}" style="color: inherit; text-decoration: none;">
+                        <div class="team-cell">
+                            <img class="team-logo" src="{{ team.logo_url }}" alt="">
+                            <span class="team-name">{{ team.team_name }}</span>
+                        </div>
+                    </a>
+                </td>
+                <td>
+                    <span class="stat-pill">{{ team.wins }}-{{ team.losses }}{% if team.ties %}-{{ team.ties }}{% endif %}</span>
+                </td>
+                <td style="text-align:right">
+                    <span class="pts">{{ "%.1f"|format(team.points_for) }}</span>
+                </td>
+                <td style="text-align:right">{{ "%.1f"|format(team.points_against) }}</td>
+                <td style="text-align:right">
+                    {% if team.streak_type == 'WIN' %}
+                        <span style="color: #00b894; font-weight:700;">W{{ team.streak_length }}</span>
+                    {% elif team.streak_type == 'LOSS' %}
+                        <span style="color: #d63031; font-weight:700;">L{{ team.streak_length }}</span>
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
