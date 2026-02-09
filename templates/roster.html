@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ team.team_name }}{% endblock %}
 {% block content %}
-<a href="/" class="back-link">&larr; Back to standings</a>
+<a href="{{ url_for('standings', league_id=league_doc._id|string) }}" class="back-link">&larr; Back to standings</a>
 
 <div class="page-header" style="display:flex; align-items:center; gap:1rem;">
     <img class="team-logo" src="{{ team.logo_url }}" alt="" style="width:56px; height:56px; border-radius:14px;">

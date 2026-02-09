@@ -27,7 +27,7 @@
                     </span>
                 </td>
                 <td>
-                    <a href="/team/{{ team.team_id }}" style="color: inherit; text-decoration: none;">
+                    <a href="{{ url_for('roster', league_id=league_doc._id|string, team_id=team.team_id) }}" style="color: inherit; text-decoration: none;">
                         <div class="team-cell">
                             <img class="team-logo" src="{{ team.logo_url }}" alt="">
                             <span class="team-name">{{ team.team_name }}</span>

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}My Leagues{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>My Leagues</h2>
+    <p class="subtitle">{{ leagues|length }} league{{ 's' if leagues|length != 1 else '' }}</p>
+</div>
+
+{% if leagues %}
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>League Name</th>
+                <th>ESPN League ID</th>
+                <th>Year</th>
+                <th style="text-align:right">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for league in leagues %}
+            <tr>
+                <td>
+                    <a href="{{ url_for('standings', league_id=league._id|string) }}">
+                        <span class="team-name">{{ league.name }}</span>
+                    </a>
+                </td>
+                <td>{{ league.espn_league_id }}</td>
+                <td>{{ league.espn_year }}</td>
+                <td style="text-align:right">
+                    <form method="POST" action="{{ url_for('delete_league', league_id=league._id|string) }}" style="display:inline;">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this league?')">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<a href="{{ url_for('add_league') }}" class="btn">Add League</a>
+{% endblock %}

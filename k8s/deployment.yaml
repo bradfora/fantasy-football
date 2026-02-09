@@ -21,26 +21,11 @@ spec:
           ports:
             - containerPort: 5000
           env:
-            - name: ESPN_LEAGUE_ID
+            - name: SECRET_KEY
               valueFrom:
                 secretKeyRef:
                   name: fantasy-football-secret
-                  key: ESPN_LEAGUE_ID
-            - name: ESPN_YEAR
-              valueFrom:
-                secretKeyRef:
-                  name: fantasy-football-secret
-                  key: ESPN_YEAR
-            - name: ESPN_S2
-              valueFrom:
-                secretKeyRef:
-                  name: fantasy-football-secret
-                  key: ESPN_S2
-            - name: ESPN_SWID
-              valueFrom:
-                secretKeyRef:
-                  name: fantasy-football-secret
-                  key: ESPN_SWID
+                  key: SECRET_KEY
             - name: MONGODB_URI
               value: "mongodb://$(MONGO_USERNAME):$(MONGO_PASSWORD)@mongodb:27017/fantasy_football?authSource=admin"
             - name: MONGO_USERNAME
