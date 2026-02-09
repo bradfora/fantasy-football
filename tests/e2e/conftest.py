@@ -13,10 +13,12 @@ from pymongo import MongoClient
 # ---------------------------------------------------------------------------
 
 BASE_URL = os.environ.get("E2E_BASE_URL", "http://localhost:30500")
-MONGODB_URI = os.environ.get(
-    "E2E_MONGODB_URI",
-    "mongodb://root:chargers@localhost:27017/fantasy_football?authSource=admin",
-)
+MONGODB_URI = os.environ.get("E2E_MONGODB_URI")
+if not MONGODB_URI:
+    raise RuntimeError(
+        "E2E_MONGODB_URI environment variable is required. "
+        "Example: E2E_MONGODB_URI=mongodb://root:pass@localhost:27017/fantasy_football?authSource=admin"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -46,8 +48,7 @@ def mongo_port_forward():
 
     # Check if mongo is already reachable on 27017
     try:
-        c = MongoClient("mongodb://root:chargers@localhost:27017/?authSource=admin",
-                        serverSelectionTimeoutMS=2000)
+        c = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=2000)
         c.admin.command("ping")
         c.close()
         yield  # already reachable – nothing to do

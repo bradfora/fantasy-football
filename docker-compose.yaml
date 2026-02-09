@@ -2,12 +2,12 @@ services:
   web:
     build: .
     ports:
-      - "3000:8000"
+      - "3001:8000"
     env_file:
       - .env
     environment:
       - FLASK_RUN_PORT=8000
-      - MONGODB_URI=mongodb://root:fantasy_football_dev@mongodb:27017/fantasy_football?authSource=admin
+      - MONGODB_URI=mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongodb:27017/fantasy_football?authSource=admin
     depends_on:
       - mongodb
 
@@ -16,8 +16,8 @@ services:
     ports:
       - "27017:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: fantasy_football_dev
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
     volumes:
       - mongodb_data:/data/db
 

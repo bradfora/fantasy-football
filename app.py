@@ -12,7 +12,9 @@ from models import User
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key")
+app.secret_key = os.environ.get("SECRET_KEY")
+if not app.secret_key:
+    raise RuntimeError("SECRET_KEY environment variable is required")
 
 # Flask-Login setup
 login_manager = LoginManager()
@@ -22,12 +24,7 @@ login_manager.login_view = "login"
 
 def _get_db():
     if not hasattr(app, "_db"):
-        try:
-            app._db = get_db()
-        except Exception as e:
-            # Fallback to mongomock for local development without MongoDB
-            import mongomock
-            app._db = mongomock.MongoClient()["fantasy_football"]
+        app._db = get_db()
     return app._db
 
 
@@ -241,4 +238,5 @@ def analytics(league_id):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("FLASK_RUN_PORT", 8000))
+    app.run(host="0.0.0.0", port=port, debug=True)
