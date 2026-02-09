@@ -8,10 +8,14 @@ from pymongo import MongoClient
 from werkzeug.security import check_password_hash, generate_password_hash
 
 
-def get_db(uri=None):
-    """Get a MongoDB database connection."""
+def get_db(uri=None, **client_kwargs):
+    """Get a MongoDB database connection with small timeouts for dev."""
     uri = uri or os.environ.get("MONGODB_URI", "mongodb://localhost:27017/fantasy_football")
-    client = MongoClient(uri)
+    timeout_ms = int(os.environ.get("MONGO_TIMEOUT_MS", "500"))
+    client_kwargs.setdefault("serverSelectionTimeoutMS", timeout_ms)
+    client_kwargs.setdefault("connectTimeoutMS", timeout_ms)
+    client_kwargs.setdefault("socketTimeoutMS", timeout_ms)
+    client = MongoClient(uri, **client_kwargs)
     return client.get_default_database()
 
 

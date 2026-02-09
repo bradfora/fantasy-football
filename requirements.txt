@@ -5,4 +5,4 @@ pymongo==4.16.0
 Flask-Login==0.6.3
 nfl_data_py==0.3.3
 pandas==1.5.3
-mongomock==4.3.0
+gunicorn==21.2.0
