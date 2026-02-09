@@ -223,5 +223,17 @@ def roster(league_id, team_id):
     return render_template("roster.html", team=team, starters=starters, bench=bench, ir=ir, display_slot=display_slot, league_doc=league_doc)
 
 
+@app.route("/leagues/<league_id>/analytics")
+@login_required
+def analytics(league_id):
+    league_doc = _get_user_league(league_id)
+    season = league_doc["espn_year"]
+
+    from analytics.basic_stats import get_positional_rankings
+    rankings = get_positional_rankings(_get_db(), season)
+
+    return render_template("analytics.html", league_doc=league_doc, rankings=rankings, season=season)
+
+
 if __name__ == "__main__":
     app.run(debug=True)

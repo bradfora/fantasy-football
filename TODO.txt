@@ -1,0 +1,27 @@
+1. Containerize the service
+1a. Create a requirements.txt to set up the requirements currently in the README
+1b. Create a Dockerfile to set up and run the application
+1c. Create a Kubernetes configuration to run the Dockerized service in a single pod
+1d. Add information to the project README how to set up Kubernetes and Docker
+1e. Follow the instructions in the README and the configuration files to set up the Kubernetes cluster and run the service. Add any missing instructions/configurations that were missed in the previous instructions
+2. Add a simple persistence layer
+2a. Install a MongoDB container
+2b. Run the MongoDB container in the Kubernetes cluster
+2c. Add instructions to the README to specify how to set this up again for local development
+2e. Create a data schema and get it approved.  Make sure that any commands to create the tables are saved as a script
+2f. Create a basic persistence layer in the code. For now don't attach it to anything
+3. Create a simple authentication flow
+3a. Create user object in the database and persistence layer to store the username, password (hashed). Make sure that any scripts to create MongoDB objects are saved into the project
+3a. Create a login page that authenticates against the user table
+3b. Create a "Create user" page that stores new users in the user table
+3c. Protect any existing endpoints
+3d. Ensure that any authenticated endpoints have access to the user
+4. Create the ability to add multiple leagues
+4a. Update the db schema and persistence layer to have a list of leagues and teams for each user
+4b. Update the db schema and persistence layer to create a league object that stores the auth information that's currently required in .env
+4c. Add a flow to with frontend and backend to create a new league, which takes you to a page to add the information that's currently in .env and add it to the league object
+4d. Update any logic depending on the .env file to instead pull league information from the league information
+5. Add advanced functionality. I'd like for this tool to be useful in providing insights for drafting, managing my team via trades and acquisitions, and start/sit decisions
+5a. Research data modeling and data analytics to come up with up with a recommendation how to analyze and predict player performance over a season and for a given game
+5b. Research quality data sources to get historical data needed to support training and analysis
+5c. Propose a plan to implement advanced analytics

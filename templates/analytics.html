@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Analytics - {{ season }}{% endblock %}
+{% block content %}
+<a href="{{ url_for('standings', league_id=league_doc._id|string) }}" class="back-link">&larr; Back to standings</a>
+
+<div class="page-header">
+    <h2>Player Analytics</h2>
+    <p class="subtitle">{{ season }} Season &middot; Top players by position (PPR scoring)</p>
+</div>
+
+{% for position in ["QB", "RB", "WR", "TE"] %}
+{% if rankings.get(position) %}
+<div class="card">
+    <div class="card-header">
+        {{ position }}
+        <span class="badge">Top {{ rankings[position]|length }}</span>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width:50px">Rank</th>
+                <th>Player</th>
+                <th>Team</th>
+                <th style="text-align:right">Total Pts</th>
+                <th style="text-align:right">Games</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for player in rankings[position] %}
+            <tr>
+                <td>
+                    <span class="rank {% if loop.index == 1 %}rank-1{% elif loop.index == 2 %}rank-2{% elif loop.index == 3 %}rank-3{% else %}rank-default{% endif %}">
+                        {{ loop.index }}
+                    </span>
+                </td>
+                <td><span class="player-name">{{ player.player_name }}</span></td>
+                <td><span class="pro-team">{{ player.recent_team }}</span></td>
+                <td style="text-align:right">
+                    <span class="pts {% if player.fantasy_points_ppr and player.fantasy_points_ppr > 200 %}pts-high{% endif %}">
+                        {{ "%.1f"|format(player.fantasy_points_ppr or 0) }}
+                    </span>
+                </td>
+                <td style="text-align:right">{{ player.games or '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endfor %}
+
+{% if not rankings.get("QB") and not rankings.get("RB") and not rankings.get("WR") and not rankings.get("TE") %}
+<div class="card">
+    <div style="padding: 2rem; text-align: center; color: #636e72;">
+        <p>No analytics data available for the {{ season }} season.</p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Run the data pipeline to import player stats:</p>
+        <code style="display: block; margin-top: 0.5rem; background: #f0f2f5; padding: 0.5rem; border-radius: 8px;">
+            python -c "from analytics.data_pipeline import ingest_seasonal_stats; from db import get_db; ingest_seasonal_stats(get_db(), [{{ season }}])"
+        </code>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

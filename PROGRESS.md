@@ -18,10 +18,10 @@
 | 3c   | done   | 05e1204 | Registration page |
 | 3d   | done   | 05e1204 | Protected endpoints |
 | 3e   | done   | 05e1204 | Username in nav |
-| 4a   | done   | - | LeagueRepository full CRUD |
-| 4b   | done   | - | League management UI (leagues, add, delete) |
-| 4c   | done   | - | Routes league-scoped, ESPN creds from DB |
-| 5a   | pending | - | Research player performance modeling |
-| 5b   | pending | - | Research data sources |
-| 5c   | pending | - | Propose analytics implementation plan |
-| 5d   | pending | - | Build initial data prototype |
+| 4a   | done   | 513f11f | LeagueRepository full CRUD |
+| 4b   | done   | 513f11f | League management UI (leagues, add, delete) |
+| 4c   | done   | 513f11f | Routes league-scoped, ESPN creds from DB |
+| 5a   | done   | - | Research player performance modeling |
+| 5b   | done   | - | Research data sources |
+| 5c   | done   | - | Propose analytics implementation plan |
+| 5d   | done   | - | Build initial data prototype, 94/94 tests |

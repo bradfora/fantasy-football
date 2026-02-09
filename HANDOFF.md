@@ -1,31 +1,32 @@
-# Handoff: Phase 4 - Multiple Leagues Support
+# Handoff: Phase 5 - Advanced Analytics
 
 ## What Was Done
-- **app.py**: Major refactor - removed module-level ESPN env vars, added league-scoped routes:
-  - `GET /` redirects to `/leagues`
-  - `GET /leagues` - list user's leagues
-  - `GET/POST /leagues/add` - add league with ESPN credential validation
-  - `POST /leagues/<id>/delete` - delete a league
-  - `GET /leagues/<id>/standings` - league standings
-  - `GET /leagues/<id>/team/<team_id>` - team roster
-  - `_get_user_league()` enforces ownership (returns 403 for other users' leagues)
-- **templates/leagues.html**: List leagues with delete actions
-- **templates/add_league.html**: Form for ESPN credentials
-- **templates/teams.html**: Updated links to league-scoped URLs
-- **templates/roster.html**: Updated back link to league-scoped standings
-- **templates/base.html**: Added "My Leagues" nav link, btn-danger style
-- **.env.example**: Removed ESPN_* vars, kept SECRET_KEY and MONGODB_URI
-- **k8s/deployment.yaml**: Removed ESPN credential env vars, kept SECRET_KEY + MongoDB
-- **k8s/secret.yaml.example**: Updated to only contain SECRET_KEY
-- **test_app.py**: Complete rewrite with league-scoped routes and authorization tests
+- **analytics/__init__.py**: Package init
+- **analytics/data_pipeline.py**: NFL data ingestion from nfl_data_py into MongoDB
+  - `fetch_seasonal_data(years)`, `fetch_weekly_data(years)` - wrappers around nfl_data_py
+  - `ingest_seasonal_stats(db, years)` - upserts by player_id+season, NaN→None
+  - `ingest_weekly_stats(db, years)` - upserts by player_id+season+week
+- **analytics/basic_stats.py**: Player ranking and scoring queries
+  - `get_top_scorers(db, season, position, scoring, limit)`
+  - `get_player_weekly_trend(db, player_id, season, scoring)`
+  - `get_positional_rankings(db, season, scoring)` - top 10 per position
+  - `compute_weekly_averages(db, season, position, min_games, scoring)` - aggregation pipeline
+- **test_analytics.py**: 12 tests covering data pipeline and basic stats
+- **app.py**: Added `/leagues/<id>/analytics` route with positional rankings
+- **templates/analytics.html**: Positional rankings display (QB, RB, WR, TE)
+- **requirements.txt**: Added nfl_data_py==0.3.3, pandas==1.5.3
+- **docs/research/player-performance-modeling.md**: Statistical approaches for fantasy analysis
+- **docs/research/data-sources.md**: Evaluation of available NFL data sources
+- **docs/research/analytics-implementation-plan.md**: Phased analytics roadmap
 
 ## Verification Results
-- 82/82 tests pass (62 app + 20 db)
-- Authorization tests verify user A cannot access user B's leagues (403)
-- Nonexistent leagues return 404
+- 94/94 tests pass (62 app + 20 db + 12 analytics)
+- Analytics route renders positional rankings from MongoDB
+- Data pipeline handles NaN values, upserts, and empty datasets
 
 ## Known Issues / Deferred Items
-- None
+- `compute_weekly_averages` uses MongoDB aggregation pipeline; mongomock doesn't fully support `$round`, so it's not tested
+- Predictive models (ML/regression) are documented in research but not yet implemented
 
 ## Next Step Prerequisites
-- Phase 5 will add analytics research docs and a data prototype
+- All 5 phases complete. Final gate: merge to main.
