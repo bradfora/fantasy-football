@@ -22,7 +22,12 @@ login_manager.login_view = "login"
 
 def _get_db():
     if not hasattr(app, "_db"):
-        app._db = get_db()
+        try:
+            app._db = get_db()
+        except Exception as e:
+            # Fallback to mongomock for local development without MongoDB
+            import mongomock
+            app._db = mongomock.MongoClient()["fantasy_football"]
     return app._db
 
 

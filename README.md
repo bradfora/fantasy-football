@@ -44,10 +44,10 @@ A Flask webapp that connects to ESPN Fantasy Football via the [`espn-api`](https
 2. **Run the container:**
 
    ```bash
-   docker run --env-file .env -p 8000:8000 fantasy-football:latest
+   docker run --env-file .env -p 3000:8000 fantasy-football:latest
    ```
 
-3. Access the app at `http://localhost:8000`.
+3. Access the app at `http://localhost:3000`.
 
 ## Running with Docker Compose
 
@@ -57,7 +57,7 @@ A Flask webapp that connects to ESPN Fantasy Football via the [`espn-api`](https
    docker compose up --build
    ```
 
-2. Access the app at `http://localhost:8000`.
+2. Access the app at `http://localhost:3000`.
 
 3. **Stop the app:**
 
