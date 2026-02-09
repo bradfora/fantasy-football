@@ -202,12 +202,81 @@
         /* Points highlight */
         .pts { font-weight: 700; }
         .pts-high { color: #00b894; }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-bottom: 0.3rem;
+            color: #636e72;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            border: 2px solid #dfe6e9;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-family: inherit;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #6c5ce7;
+        }
+        .btn {
+            display: inline-block;
+            background: #6c5ce7;
+            color: #fff;
+            border: none;
+            padding: 0.6rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+        }
+        .btn:hover { background: #5a4bd1; }
+
+        /* Flash messages */
+        .flash {
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        .flash-error {
+            background: #ffe0e0;
+            color: #c0392b;
+        }
+
+        /* Nav user info */
+        .nav-spacer { flex: 1; }
+        .nav-user {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #636e72;
+        }
+        .nav-link {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
     <nav>
         <span class="logo-icon">🏈</span>
         <a href="/">Fantasy Football Analyzer</a>
+        <span class="nav-spacer"></span>
+        {% if current_user.is_authenticated %}
+        <span class="nav-user">{{ current_user.username }}</span>
+        <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
+        {% else %}
+        <a href="{{ url_for('login') }}" class="nav-link">Login</a>
+        {% endif %}
     </nav>
     <div class="container">
         {% block content %}{% endblock %}
