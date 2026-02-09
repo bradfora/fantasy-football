@@ -5,3 +5,20 @@ services:
       - "5000:5000"
     env_file:
       - .env
+    environment:
+      - MONGODB_URI=mongodb://root:fantasy_football_dev@mongodb:27017/fantasy_football?authSource=admin
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: fantasy_football_dev
+    volumes:
+      - mongodb_data:/data/db
+
+volumes:
+  mongodb_data:

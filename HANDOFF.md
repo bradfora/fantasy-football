@@ -1,26 +1,27 @@
-# Handoff: Phase 1 - Containerize the Service
+# Handoff: Phase 2 - Add Persistence Layer
 
 ## What Was Done
-- **requirements.txt**: Flask==3.1.2, espn-api==0.45.1, python-dotenv==1.2.1
-- **requirements-dev.txt**: includes requirements.txt + pytest==8.4.2
-- **Dockerfile**: python:3.11-slim, pip install with progress bar off (avoids threading issue)
-- **docker-compose.yaml**: single web service with env_file and port 5000
-- **.dockerignore**: excludes .venv, .git, .env, __pycache__, .idea, test files
-- **k8s/deployment.yaml**: single-replica, imagePullPolicy: Never, ESPN env vars from secret
-- **k8s/service.yaml**: NodePort on 30500
-- **k8s/secret.yaml.example**: template with placeholder ESPN credentials
-- **.gitignore**: added k8s/secret.yaml and k8s/mongodb-secret.yaml
-- **README.md**: updated with Docker, Docker Compose, and Kubernetes sections
-- **test_app.py**: fixed pre-existing test bug (Ja'Marr Chase apostrophe HTML encoding)
+- **docker-compose.yaml**: Added MongoDB service (mongo:7), volume, MONGODB_URI for Flask
+- **k8s/mongodb-deployment.yaml**: MongoDB pod with PVC and secret refs
+- **k8s/mongodb-service.yaml**: ClusterIP service for internal access
+- **k8s/mongodb-pvc.yaml**: 1Gi PersistentVolumeClaim
+- **k8s/mongodb-secret.yaml.example**: Template for MongoDB credentials
+- **requirements.txt**: Added pymongo==4.16.0
+- **requirements-dev.txt**: Added mongomock==4.3.0
+- **.env.example**: Added MONGODB_URI
+- **k8s/deployment.yaml**: Added MONGODB_URI env var referencing MongoDB secret
+- **SCHEMA.md**: Documented users and leagues collections with indexes
+- **scripts/init_db.py**: Creates collections and indexes
+- **db.py**: UserRepository and LeagueRepository with full CRUD
+- **test_db.py**: 20 tests using mongomock for all repository operations
+- **README.md**: Added MongoDB Setup section
 
 ## Verification Results
-- 34/34 tests pass
-- Docker build succeeds
-- Fresh venv install with requirements-dev.txt works
+- 54/54 tests pass (34 app + 20 db)
+- db.py is NOT imported by app.py yet (will be wired in Phase 3/4)
 
 ## Known Issues / Deferred Items
-- kubectl dry-run couldn't run (old kubectl version, no k8s cluster configured locally)
-- Docker run not tested with real ESPN credentials (would need .env file)
+- None
 
 ## Next Step Prerequisites
-- MongoDB added to docker-compose and k8s in Phase 2
+- Phase 3 will add flask-login, User model, and auth routes

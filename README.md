@@ -65,6 +65,35 @@ A Flask webapp that connects to ESPN Fantasy Football via the [`espn-api`](https
    docker compose down
    ```
 
+## MongoDB Setup
+
+### With Docker Compose
+
+MongoDB starts automatically with `docker compose up`. The Flask app connects via the `MONGODB_URI` environment variable configured in `docker-compose.yaml`.
+
+### With Kubernetes
+
+1. Create MongoDB secret: `cp k8s/mongodb-secret.yaml.example k8s/mongodb-secret.yaml`
+2. Apply MongoDB resources:
+   ```bash
+   kubectl apply -f k8s/mongodb-secret.yaml
+   kubectl apply -f k8s/mongodb-pvc.yaml
+   kubectl apply -f k8s/mongodb-deployment.yaml
+   kubectl apply -f k8s/mongodb-service.yaml
+   ```
+
+### Local Development
+
+For local development without Docker, install MongoDB and set `MONGODB_URI` in your `.env` file:
+```
+MONGODB_URI=mongodb://localhost:27017/fantasy_football
+```
+
+Initialize the database:
+```bash
+python scripts/init_db.py
+```
+
 ## Running with Kubernetes (Docker Desktop)
 
 ### Prerequisites

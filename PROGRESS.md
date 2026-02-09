@@ -2,17 +2,17 @@
 
 | Step | Status | Commit | Notes |
 |------|--------|--------|-------|
-| 1a   | done   | - | Created requirements.txt and requirements-dev.txt |
-| 1b   | done   | - | Created Dockerfile and .dockerignore |
-| 1c   | done   | - | Created docker-compose.yaml |
-| 1d   | done   | - | Created k8s configs (deployment, service, secret example) |
-| 1e   | done   | - | Updated README with Docker/Compose/K8s instructions |
-| 1f   | done   | - | Docker build verified, 34/34 tests pass |
-| 2a   | pending | - | Add MongoDB to Compose/K8s |
-| 2b   | pending | - | Add MongoDB connection to Flask |
-| 2c   | pending | - | Update README for MongoDB |
-| 2d   | pending | - | Design schema, create init script |
-| 2e   | pending | - | Create persistence layer code |
+| 1a   | done   | 0722a76 | Created requirements.txt and requirements-dev.txt |
+| 1b   | done   | 0722a76 | Created Dockerfile and .dockerignore |
+| 1c   | done   | 0722a76 | Created docker-compose.yaml |
+| 1d   | done   | 0722a76 | Created k8s configs (deployment, service, secret example) |
+| 1e   | done   | 0722a76 | Updated README with Docker/Compose/K8s instructions |
+| 1f   | done   | 0722a76 | Docker build verified, 34/34 tests pass |
+| 2a   | done   | - | Added MongoDB to Compose and K8s |
+| 2b   | done   | - | Added pymongo, MONGODB_URI env vars |
+| 2c   | done   | - | Updated README with MongoDB section |
+| 2d   | done   | - | Created SCHEMA.md and init_db.py |
+| 2e   | done   | - | Created db.py and test_db.py (20 tests) |
 | 3a   | pending | - | User model and password handling |
 | 3b   | pending | - | Login page and routes |
 | 3c   | pending | - | Registration page |
