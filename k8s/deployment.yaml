@@ -19,7 +19,7 @@ spec:
           image: fantasy-football:latest
           imagePullPolicy: Never
           ports:
-            - containerPort: 5000
+            - containerPort: 8000
           env:
             - name: SECRET_KEY
               valueFrom:
