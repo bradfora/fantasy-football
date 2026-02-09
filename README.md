@@ -1,6 +1,6 @@
 # Fantasy Football Analyzer
 
-A Flask webapp that connects to ESPN Fantasy Football via the [`espn-api`](https://github.com/cwendt94/espn-api) package to display league standings and team rosters.
+A Flask webapp that connects to ESPN Fantasy Football via the [`espn-api`](https://github.com/cwendt94/espn-api) package to display league standings, team rosters, and player analytics powered by [nfl_data_py](https://github.com/nflverse/nfl_data_py).
 
 ## Prerequisites
 
@@ -89,10 +89,13 @@ For local development without Docker, install MongoDB and set `MONGODB_URI` in y
 MONGODB_URI=mongodb://localhost:27017/fantasy_football
 ```
 
-Initialize the database:
+Initialize the database and load analytics data:
 ```bash
 python scripts/init_db.py
+python scripts/load_stats.py --years 2024
 ```
+
+See [Populating Analytics Data](#populating-analytics-data) below for details.
 
 ## Running with Kubernetes (Docker Desktop)
 
@@ -140,35 +143,44 @@ kubectl delete -f k8s/deployment.yaml
 kubectl delete -f k8s/secret.yaml
 ```
 
-## Project Structure
+## Populating Analytics Data
 
-```
-.
-├── app.py              # Flask application (routes, helpers)
-├── test_app.py         # Test suite (34 tests)
-├── requirements.txt    # Production dependencies
-├── requirements-dev.txt # Dev dependencies (includes pytest)
-├── Dockerfile          # Container image definition
-├── docker-compose.yaml # Docker Compose configuration
-├── .env.example        # Template for required environment variables
-├── .env                # Your credentials (git-ignored)
-├── k8s/                # Kubernetes configurations
-│   ├── deployment.yaml # App deployment (single replica)
-│   ├── service.yaml    # NodePort service (port 30500)
-│   └── secret.yaml.example # Template for ESPN credentials
-├── templates/
-│   ├── base.html       # Shared layout, CSS, nav
-│   ├── teams.html      # League standings page
-│   └── roster.html     # Team roster page
-└── static/             # Static assets (currently empty)
-```
+Analytics features (positional rankings, player detail pages, team analysis, start/sit suggestions) require NFL stats data in MongoDB. This data comes from [nfl_data_py](https://github.com/nflverse/nfl_data_py).
+
+1. **Initialize the database** (creates collections and indexes -- only needed once):
+
+   ```bash
+   python scripts/init_db.py
+   ```
+
+2. **Load player stats** for the season(s) matching your leagues:
+
+   ```bash
+   python scripts/load_stats.py --years 2024
+   ```
+
+   Multiple seasons can be loaded at once:
+
+   ```bash
+   python scripts/load_stats.py --years 2022 2023 2024
+   ```
+
+   This ingests seasonal totals and week-by-week stats into the `seasonal_stats` and `weekly_stats` collections. Records are upserted, so it is safe to re-run during the season to pick up updated stats.
+
+3. Analytics pages will show data once stats are loaded. If no data is available for a season, the analytics page displays a message with instructions.
 
 ## Routes
 
 | Route | Description |
 |---|---|
-| `GET /` | League standings sorted by rank |
-| `GET /team/<team_id>` | Roster for a specific team, split into Starters, Bench, and IR |
+| `GET /` | Redirects to leagues list |
+| `GET /leagues` | User's saved leagues |
+| `GET /leagues/add` | Add a new ESPN league |
+| `GET /leagues/<id>/standings` | League standings sorted by rank |
+| `GET /leagues/<id>/team/<team_id>` | Team roster (Starters, Bench, IR) |
+| `GET /leagues/<id>/analytics` | Top players by position for the season |
+| `GET /leagues/<id>/player/<player_id>` | Individual player detail and weekly trend |
+| `GET /leagues/<id>/team/<team_id>/analytics` | Team roster analysis with start/sit suggestions |
 
 ## Key Concepts
 
@@ -185,7 +197,9 @@ Starters are sorted in this order: QB, RB, WR, TE, FLEX, K, D/ST.
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest test_app.py -v
+python -m pytest test_app.py test_db.py test_analytics.py -v
 ```
 
-Tests mock the ESPN API via `unittest.mock.patch` on `get_league()`, using `SimpleNamespace` objects to simulate ESPN's Team/Player/League models. No ESPN credentials are needed to run tests.
+Tests mock the ESPN API via `unittest.mock.patch` with `SimpleNamespace` objects and use `mongomock` for MongoDB. No ESPN credentials or running MongoDB instance are needed for unit tests.
+
+E2E tests in `tests/e2e/` require a running app and MongoDB instance. See `tests/e2e/conftest.py` for setup details.
