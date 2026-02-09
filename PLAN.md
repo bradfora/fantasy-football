@@ -49,11 +49,11 @@ Every step produces two tracking artifacts:
 - **Create:** `Dockerfile` (python:3.11-slim, COPY requirements + install, COPY app, `flask run --host=0.0.0.0`)
 - **Create:** `.dockerignore` (exclude .venv, .git, .env, __pycache__, .idea, .pytest_cache)
 - **Modify:** `app.py` - no changes needed; `flask run` auto-detects the `app` object
-- **Verify:** `docker build -t fantasy-football:latest .` succeeds; `docker run --env-file .env -p 5000:5000 fantasy-football:latest` serves the app at localhost:5000
+- **Verify:** `docker build -t fantasy-football:latest .` succeeds; `docker run --env-file .env -p 8000:8000 fantasy-football:latest` serves the app at localhost:8000
 - **Iterate:** If espn-api needs C deps that fail on slim, switch to `python:3.11`
 
 ### Step 1c: Create Docker Compose setup
-- **Create:** `docker-compose.yaml` - Flask app service with env_file, port 5000, for simple local dev
+- **Create:** `docker-compose.yaml` - Flask app service with env_file, port 8000, for simple local dev
 - **Verify:** `docker compose up` starts the app successfully
 
 ### Step 1d: Create Kubernetes configuration
@@ -237,7 +237,7 @@ Index: compound on (user_id, espn_league_id, espn_year)
 ## Verification Checklist (End-to-End)
 
 After all phases:
-1. `docker compose up` starts Flask + MongoDB, app accessible at localhost:5000
+1. `docker compose up` starts Flask + MongoDB, app accessible at localhost:8000
 2. `kubectl apply -f k8s/` deploys everything, app at localhost:30500
 3. Register a new user, log in
 4. Add a league with real ESPN credentials

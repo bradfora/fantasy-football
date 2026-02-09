@@ -42,7 +42,7 @@ ESPN_SWID={1A2B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D}
 python app.py
 ```
 
-Open `http://127.0.0.1:5000` in your browser.
+Open `http://127.0.0.1:8000` in your browser.
 
 ### League Standings
 

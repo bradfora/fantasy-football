@@ -6,6 +6,7 @@ services:
     env_file:
       - .env
     environment:
+      - FLASK_RUN_PORT=8000
       - MONGODB_URI=mongodb://root:fantasy_football_dev@mongodb:27017/fantasy_football?authSource=admin
     depends_on:
       - mongodb
