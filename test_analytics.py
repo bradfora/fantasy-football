@@ -5,7 +5,10 @@ import pandas as pd
 import pytest
 
 from analytics.data_pipeline import fetch_seasonal_data, fetch_weekly_data, ingest_seasonal_stats, ingest_weekly_stats
-from analytics.basic_stats import get_top_scorers, get_player_weekly_trend, get_positional_rankings
+from analytics.basic_stats import (
+    get_top_scorers, get_player_weekly_trend, get_positional_rankings,
+    get_player_summary, get_position_averages, analyze_roster,
+)
 
 
 @pytest.fixture
@@ -154,3 +157,113 @@ class TestBasicStats:
         assert "TE" in result
         assert len(result["QB"]) == 2
         assert len(result["RB"]) == 1
+
+
+@pytest.fixture
+def db_with_full_data(db):
+    """Seed both seasonal and weekly stats for comprehensive tests."""
+    db["seasonal_stats"].insert_many([
+        {"player_id": "p1", "player_name": "Patrick Mahomes", "position": "QB",
+         "recent_team": "KC", "season": 2024, "fantasy_points_ppr": 350.0, "games": 17},
+        {"player_id": "p2", "player_name": "Josh Allen", "position": "QB",
+         "recent_team": "BUF", "season": 2024, "fantasy_points_ppr": 330.0, "games": 17},
+        {"player_id": "p3", "player_name": "Derrick Henry", "position": "RB",
+         "recent_team": "BAL", "season": 2024, "fantasy_points_ppr": 280.0, "games": 16},
+        {"player_id": "p4", "player_name": "Tyreek Hill", "position": "WR",
+         "recent_team": "MIA", "season": 2024, "fantasy_points_ppr": 260.0, "games": 17},
+        {"player_id": "p5", "player_name": "Travis Kelce", "position": "TE",
+         "recent_team": "KC", "season": 2024, "fantasy_points_ppr": 200.0, "games": 17},
+    ])
+    # Weekly data for p1 (6 weeks)
+    for week in range(1, 7):
+        db["weekly_stats"].insert_one({
+            "player_id": "p1", "player_name": "Patrick Mahomes", "position": "QB",
+            "season": 2024, "week": week, "opponent_team": f"OPP{week}",
+            "fantasy_points_ppr": 20.0 + week,
+        })
+    # Weekly data for p3 (6 weeks, trending down)
+    for week in range(1, 7):
+        pts = 25.0 - week * 3 if week >= 4 else 25.0
+        db["weekly_stats"].insert_one({
+            "player_id": "p3", "player_name": "Derrick Henry", "position": "RB",
+            "season": 2024, "week": week, "opponent_team": f"OPP{week}",
+            "fantasy_points_ppr": pts,
+        })
+    return db
+
+
+class TestPlayerSummary:
+    def test_get_player_summary(self, db_with_full_data):
+        result = get_player_summary(db_with_full_data, "p1", 2024)
+        assert result is not None
+        assert result["player_name"] == "Patrick Mahomes"
+        assert result["position"] == "QB"
+        assert result["games"] == 6
+        assert result["pos_rank"] == 1
+        assert len(result["weekly"]) == 6
+        assert result["floor"] > 0
+        assert result["ceiling"] > result["floor"]
+        assert result["std_dev"] >= 0
+        assert result["last_3_avg"] > 0
+
+    def test_get_player_summary_not_found(self, db_with_full_data):
+        result = get_player_summary(db_with_full_data, "nonexistent", 2024)
+        assert result is None
+
+    def test_get_position_averages(self, db_with_full_data):
+        result = get_position_averages(db_with_full_data, 2024)
+        assert "QB" in result
+        assert "RB" in result
+        assert "WR" in result
+        assert "TE" in result
+        assert result["QB"]["count"] == 2
+        assert result["QB"]["avg_points"] > 0
+
+    def test_analyze_roster(self, db_with_full_data):
+        roster = [
+            {"name": "Patrick Mahomes", "position": "QB", "lineupSlot": "QB",
+             "proTeam": "KC", "total_points": 350.0, "avg_points": 20.6},
+            {"name": "Unknown Player", "position": "WR", "lineupSlot": "WR",
+             "proTeam": "NYG", "total_points": 50.0, "avg_points": 5.0},
+        ]
+        result = analyze_roster(db_with_full_data, roster, 2024)
+        assert "players" in result
+        assert "suggestions" in result
+        assert len(result["players"]) == 2
+        # First player should be matched
+        assert result["players"][0]["matched"] is True
+        assert result["players"][0]["player_id"] == "p1"
+        # Second player should not be matched
+        assert result["players"][1]["matched"] is False
+
+    def test_analyze_roster_bench_over_starter(self, db_with_full_data):
+        """Bench player with better recent form generates a swap suggestion."""
+        # Add weekly data for p4 (bench player trending up)
+        for week in range(1, 7):
+            pts = 10.0 if week < 4 else 30.0
+            db_with_full_data["weekly_stats"].insert_one({
+                "player_id": "p4", "player_name": "Tyreek Hill", "position": "WR",
+                "season": 2024, "week": week, "opponent_team": f"OPP{week}",
+                "fantasy_points_ppr": pts,
+            })
+        # Add a weak starter WR with weekly data
+        db_with_full_data["seasonal_stats"].insert_one({
+            "player_id": "p6", "player_name": "Weak WR", "position": "WR",
+            "recent_team": "NYG", "season": 2024, "fantasy_points_ppr": 100.0, "games": 17,
+        })
+        for week in range(1, 7):
+            db_with_full_data["weekly_stats"].insert_one({
+                "player_id": "p6", "player_name": "Weak WR", "position": "WR",
+                "season": 2024, "week": week, "opponent_team": f"OPP{week}",
+                "fantasy_points_ppr": 5.0,
+            })
+
+        roster = [
+            {"name": "Weak WR", "position": "WR", "lineupSlot": "WR",
+             "proTeam": "NYG", "total_points": 100.0, "avg_points": 5.9},
+            {"name": "Tyreek Hill", "position": "WR", "lineupSlot": "BE",
+             "proTeam": "MIA", "total_points": 260.0, "avg_points": 15.3},
+        ]
+        result = analyze_roster(db_with_full_data, roster, 2024)
+        assert len(result["suggestions"]) > 0
+        assert any("Consider starting Tyreek Hill over Weak WR" in s for s in result["suggestions"])

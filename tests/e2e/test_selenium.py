@@ -554,3 +554,222 @@ class TestFullWorkflowSelenium:
         )
         # Should be on leagues page now
         assert "/leagues" in fresh_driver.current_url or "My Leagues" in fresh_driver.page_source
+
+
+# ===================================================================
+# 8. Player Detail Tests (Selenium)
+# ===================================================================
+
+
+class TestPlayerDetailSelenium:
+    """Test the player detail analytics page via the browser."""
+
+    @pytest.fixture(autouse=True)
+    def _setup(self, fresh_driver, mongo_db, mongo_port_forward):
+        self.driver = fresh_driver
+        self.db = mongo_db
+        self.username = _unique_username()
+        self.password = "TestPass123!"
+        _register_user(self.driver, self.username, self.password)
+        WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'My Leagues')]"))
+        )
+        user_doc = self.db["users"].find_one({"username": self.username})
+        self.user_id = user_doc["_id"]
+        yield
+        self.db["leagues"].delete_many({"user_id": self.user_id})
+        self.db["seasonal_stats"].delete_many({"player_id": {"$regex": "^sel_test_"}})
+        self.db["weekly_stats"].delete_many({"player_id": {"$regex": "^sel_test_"}})
+
+    def _insert_league(self):
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        doc = {
+            "user_id": self.user_id,
+            "name": "TestLeague_SelPlayer",
+            "espn_league_id": 12345,
+            "espn_year": 2024,
+            "espn_s2": "fake",
+            "espn_swid": "{fake}",
+            "created_at": now,
+            "updated_at": now,
+        }
+        result = self.db["leagues"].insert_one(doc)
+        doc["_id"] = result.inserted_id
+        return doc
+
+    def _seed_player(self):
+        self.db["seasonal_stats"].update_one(
+            {"player_id": "sel_test_p1", "season": 2024},
+            {"$set": {
+                "player_id": "sel_test_p1",
+                "player_name": "Selenium Test QB",
+                "position": "QB",
+                "recent_team": "KC",
+                "season": 2024,
+                "fantasy_points_ppr": 300.0,
+                "games": 15,
+            }},
+            upsert=True,
+        )
+        for week in range(1, 4):
+            self.db["weekly_stats"].update_one(
+                {"player_id": "sel_test_p1", "season": 2024, "week": week},
+                {"$set": {
+                    "player_id": "sel_test_p1",
+                    "player_name": "Selenium Test QB",
+                    "position": "QB",
+                    "season": 2024,
+                    "week": week,
+                    "opponent_team": f"OPP{week}",
+                    "fantasy_points_ppr": 18.0 + week,
+                }},
+                upsert=True,
+            )
+
+    def test_player_detail_page_loads(self):
+        league = self._insert_league()
+        league_id = str(league["_id"])
+        self._seed_player()
+        self.driver.get(f"{BASE_URL}/leagues/{league_id}/player/sel_test_p1")
+        WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Selenium Test QB')]"))
+        )
+        assert "Season Summary" in self.driver.page_source
+        assert "QB" in self.driver.page_source
+        assert "KC" in self.driver.page_source
+
+    def test_player_detail_shows_weekly_trend(self):
+        league = self._insert_league()
+        league_id = str(league["_id"])
+        self._seed_player()
+        self.driver.get(f"{BASE_URL}/leagues/{league_id}/player/sel_test_p1")
+        WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Weekly Scoring Trend')]"))
+        )
+        assert "Weekly Scoring Trend" in self.driver.page_source
+
+    def test_player_detail_back_link_navigates(self):
+        league = self._insert_league()
+        league_id = str(league["_id"])
+        self._seed_player()
+        self.driver.get(f"{BASE_URL}/leagues/{league_id}/player/sel_test_p1")
+        WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "back-link"))
+        )
+        back_link = self.driver.find_element(By.CLASS_NAME, "back-link")
+        assert "Back to analytics" in back_link.text
+        back_link.click()
+        WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Player Analytics')]"))
+        )
+        assert "Player Analytics" in self.driver.page_source
+
+    def test_player_detail_nonexistent_returns_404(self):
+        league = self._insert_league()
+        league_id = str(league["_id"])
+        self.driver.get(f"{BASE_URL}/leagues/{league_id}/player/nonexistent_player")
+        # 404 page or error
+        assert "404" in self.driver.page_source or "Not Found" in self.driver.page_source
+
+
+# ===================================================================
+# 9. Analytics Page with Data Tests (Selenium)
+# ===================================================================
+
+
+class TestAnalyticsWithDataSelenium:
+    """Test the analytics page with seeded stats data via the browser."""
+
+    @pytest.fixture(autouse=True)
+    def _setup(self, fresh_driver, mongo_db, mongo_port_forward):
+        self.driver = fresh_driver
+        self.db = mongo_db
+        self.username = _unique_username()
+        self.password = "TestPass123!"
+        _register_user(self.driver, self.username, self.password)
+        WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'My Leagues')]"))
+        )
+        user_doc = self.db["users"].find_one({"username": self.username})
+        self.user_id = user_doc["_id"]
+        yield
+        self.db["leagues"].delete_many({"user_id": self.user_id})
+        self.db["seasonal_stats"].delete_many({"player_id": {"$regex": "^sel_test_"}})
+
+    def _insert_league(self):
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        doc = {
+            "user_id": self.user_id,
+            "name": "TestLeague_SelAnalytics",
+            "espn_league_id": 12345,
+            "espn_year": 2024,
+            "espn_s2": "fake",
+            "espn_swid": "{fake}",
+            "created_at": now,
+            "updated_at": now,
+        }
+        result = self.db["leagues"].insert_one(doc)
+        doc["_id"] = result.inserted_id
+        return doc
+
+    def _seed_stats(self):
+        self.db["seasonal_stats"].update_one(
+            {"player_id": "sel_test_analytics_qb", "season": 2024},
+            {"$set": {
+                "player_id": "sel_test_analytics_qb",
+                "player_name": "Selenium Analytics QB",
+                "position": "QB",
+                "recent_team": "BUF",
+                "season": 2024,
+                "fantasy_points_ppr": 340.0,
+                "games": 17,
+            }},
+            upsert=True,
+        )
+
+    def test_analytics_page_shows_player_with_link(self):
+        league = self._insert_league()
+        league_id = str(league["_id"])
+        self._seed_stats()
+        self.driver.get(f"{BASE_URL}/leagues/{league_id}/analytics")
+        WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Selenium Analytics QB')]"))
+        )
+        # Player name should be a clickable link
+        link = self.driver.find_element(
+            By.XPATH, "//a[contains(text(), 'Selenium Analytics QB')]"
+        )
+        href = link.get_attribute("href")
+        assert f"/leagues/{league_id}/player/sel_test_analytics_qb" in href
+
+    def test_analytics_click_player_navigates_to_detail(self):
+        league = self._insert_league()
+        league_id = str(league["_id"])
+        self._seed_stats()
+        self.driver.get(f"{BASE_URL}/leagues/{league_id}/analytics")
+        WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//a[contains(text(), 'Selenium Analytics QB')]"))
+        )
+        link = self.driver.find_element(
+            By.XPATH, "//a[contains(text(), 'Selenium Analytics QB')]"
+        )
+        link.click()
+        WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Season Summary')]"))
+        )
+        assert "Selenium Analytics QB" in self.driver.page_source
+        assert "Season Summary" in self.driver.page_source
+
+    def test_analytics_page_shows_avg_per_game_column(self):
+        league = self._insert_league()
+        league_id = str(league["_id"])
+        self._seed_stats()
+        self.driver.get(f"{BASE_URL}/leagues/{league_id}/analytics")
+        WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//th[contains(text(), 'Avg/Gm')]"))
+        )
+        assert "Avg/Gm" in self.driver.page_source
+        # 340.0 / 17 = 20.0
+        assert "20.0" in self.driver.page_source

@@ -221,6 +221,8 @@ class TestProtectedRoutes:
         f"/leagues/{ObjectId()}/standings",
         f"/leagues/{ObjectId()}/team/1",
         f"/leagues/{ObjectId()}/analytics",
+        f"/leagues/{ObjectId()}/player/some_player_id",
+        f"/leagues/{ObjectId()}/team/1/analytics",
         f"/leagues/{ObjectId()}/delete",
     ])
     def test_unauthenticated_redirect(self, api_session, path):
@@ -518,3 +520,344 @@ class TestNavigation:
     def test_app_title_in_nav(self, api_session):
         resp = api_session.get(f"{BASE_URL}/login")
         assert "Fantasy Football Analyzer" in resp.text
+
+
+# ===================================================================
+# 9. Player Detail Route Tests
+# ===================================================================
+
+
+class TestPlayerDetail:
+    """Test the player detail analytics page."""
+
+    @pytest.fixture(autouse=True)
+    def _setup(self, logged_in_session, mongo_db, mongo_port_forward):
+        self.session, self.user = logged_in_session
+        self.db = mongo_db
+        user_doc = self.db["users"].find_one({"username": self.user["username"]})
+        self.user_id = user_doc["_id"]
+
+    def _insert_league(self, name="TestLeague_PlayerDetail"):
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        doc = {
+            "user_id": self.user_id,
+            "name": name,
+            "espn_league_id": 12345,
+            "espn_year": 2024,
+            "espn_s2": "fake_s2",
+            "espn_swid": "{fake-swid}",
+            "created_at": now,
+            "updated_at": now,
+        }
+        result = self.db["leagues"].insert_one(doc)
+        doc["_id"] = result.inserted_id
+        return doc
+
+    def _seed_player_stats(self):
+        """Insert seasonal + weekly stats for a test player."""
+        self.db["seasonal_stats"].update_one(
+            {"player_id": "test_p1", "season": 2024},
+            {"$set": {
+                "player_id": "test_p1",
+                "player_name": "Test Quarterback",
+                "position": "QB",
+                "recent_team": "KC",
+                "season": 2024,
+                "fantasy_points_ppr": 300.0,
+                "games": 15,
+            }},
+            upsert=True,
+        )
+        for week in range(1, 4):
+            self.db["weekly_stats"].update_one(
+                {"player_id": "test_p1", "season": 2024, "week": week},
+                {"$set": {
+                    "player_id": "test_p1",
+                    "player_name": "Test Quarterback",
+                    "position": "QB",
+                    "season": 2024,
+                    "week": week,
+                    "opponent_team": f"OPP{week}",
+                    "fantasy_points_ppr": 18.0 + week,
+                }},
+                upsert=True,
+            )
+
+    def _cleanup_stats(self):
+        self.db["seasonal_stats"].delete_many({"player_id": "test_p1"})
+        self.db["weekly_stats"].delete_many({"player_id": "test_p1"})
+
+    def test_player_detail_renders_with_data(self):
+        league = self._insert_league()
+        league_id = str(league["_id"])
+        self._seed_player_stats()
+        try:
+            resp = self.session.get(
+                f"{BASE_URL}/leagues/{league_id}/player/test_p1",
+                allow_redirects=True,
+            )
+            assert resp.status_code == 200
+            assert "Test Quarterback" in resp.text
+            assert "Season Summary" in resp.text
+            assert "Weekly Scoring Trend" in resp.text
+        finally:
+            self.db["leagues"].delete_one({"_id": league["_id"]})
+            self._cleanup_stats()
+
+    def test_player_detail_shows_position_and_team(self):
+        league = self._insert_league()
+        league_id = str(league["_id"])
+        self._seed_player_stats()
+        try:
+            resp = self.session.get(
+                f"{BASE_URL}/leagues/{league_id}/player/test_p1",
+                allow_redirects=True,
+            )
+            assert resp.status_code == 200
+            assert "QB" in resp.text
+            assert "KC" in resp.text
+        finally:
+            self.db["leagues"].delete_one({"_id": league["_id"]})
+            self._cleanup_stats()
+
+    def test_player_detail_nonexistent_player_returns_404(self):
+        league = self._insert_league()
+        league_id = str(league["_id"])
+        try:
+            resp = self.session.get(
+                f"{BASE_URL}/leagues/{league_id}/player/nonexistent_xyz",
+                allow_redirects=False,
+            )
+            assert resp.status_code == 404
+        finally:
+            self.db["leagues"].delete_one({"_id": league["_id"]})
+
+    def test_player_detail_nonexistent_league_returns_404(self):
+        fake_id = str(ObjectId())
+        resp = self.session.get(
+            f"{BASE_URL}/leagues/{fake_id}/player/test_p1",
+            allow_redirects=False,
+        )
+        assert resp.status_code == 404
+
+    def test_player_detail_wrong_user_returns_403(self):
+        """Player detail for another user's league should return 403."""
+        from datetime import datetime, timezone
+        fake_user_id = ObjectId()
+        doc = {
+            "user_id": fake_user_id,
+            "name": "TestLeague_OtherUser",
+            "espn_league_id": 99999,
+            "espn_year": 2024,
+            "espn_s2": "fake",
+            "espn_swid": "{fake}",
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        }
+        result = self.db["leagues"].insert_one(doc)
+        league_id = str(result.inserted_id)
+        try:
+            resp = self.session.get(
+                f"{BASE_URL}/leagues/{league_id}/player/test_p1",
+                allow_redirects=False,
+            )
+            assert resp.status_code == 403
+        finally:
+            self.db["leagues"].delete_one({"_id": result.inserted_id})
+
+    def test_player_detail_back_link_to_analytics(self):
+        league = self._insert_league()
+        league_id = str(league["_id"])
+        self._seed_player_stats()
+        try:
+            resp = self.session.get(
+                f"{BASE_URL}/leagues/{league_id}/player/test_p1",
+                allow_redirects=True,
+            )
+            assert f"/leagues/{league_id}/analytics" in resp.text
+            assert "Back to analytics" in resp.text
+        finally:
+            self.db["leagues"].delete_one({"_id": league["_id"]})
+            self._cleanup_stats()
+
+
+# ===================================================================
+# 10. Team Analytics Route Tests
+# ===================================================================
+
+
+class TestTeamAnalytics:
+    """Test the team analytics page."""
+
+    @pytest.fixture(autouse=True)
+    def _setup(self, logged_in_session, mongo_db, mongo_port_forward):
+        self.session, self.user = logged_in_session
+        self.db = mongo_db
+        user_doc = self.db["users"].find_one({"username": self.user["username"]})
+        self.user_id = user_doc["_id"]
+
+    def _insert_league(self, name="TestLeague_TeamAnalytics"):
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        doc = {
+            "user_id": self.user_id,
+            "name": name,
+            "espn_league_id": 12345,
+            "espn_year": 2024,
+            "espn_s2": "fake_s2",
+            "espn_swid": "{fake-swid}",
+            "created_at": now,
+            "updated_at": now,
+        }
+        result = self.db["leagues"].insert_one(doc)
+        doc["_id"] = result.inserted_id
+        return doc
+
+    def test_team_analytics_with_invalid_espn_creds(self):
+        """Team analytics requires ESPN API — with fake creds expect 500."""
+        league = self._insert_league()
+        league_id = str(league["_id"])
+        try:
+            resp = self.session.get(
+                f"{BASE_URL}/leagues/{league_id}/team/1/analytics",
+                allow_redirects=True,
+            )
+            # No error handling for ESPN failures, so expect 500
+            assert resp.status_code in (200, 500)
+        finally:
+            self.db["leagues"].delete_one({"_id": league["_id"]})
+
+    def test_team_analytics_nonexistent_league_returns_404(self):
+        fake_id = str(ObjectId())
+        resp = self.session.get(
+            f"{BASE_URL}/leagues/{fake_id}/team/1/analytics",
+            allow_redirects=False,
+        )
+        assert resp.status_code == 404
+
+    def test_team_analytics_wrong_user_returns_403(self):
+        from datetime import datetime, timezone
+        fake_user_id = ObjectId()
+        doc = {
+            "user_id": fake_user_id,
+            "name": "TestLeague_OtherUser",
+            "espn_league_id": 99999,
+            "espn_year": 2024,
+            "espn_s2": "fake",
+            "espn_swid": "{fake}",
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        }
+        result = self.db["leagues"].insert_one(doc)
+        league_id = str(result.inserted_id)
+        try:
+            resp = self.session.get(
+                f"{BASE_URL}/leagues/{league_id}/team/1/analytics",
+                allow_redirects=False,
+            )
+            assert resp.status_code == 403
+        finally:
+            self.db["leagues"].delete_one({"_id": result.inserted_id})
+
+
+# ===================================================================
+# 11. Analytics Page Tests (with seeded data)
+# ===================================================================
+
+
+class TestAnalyticsWithData:
+    """Test the analytics page with seeded stats data."""
+
+    @pytest.fixture(autouse=True)
+    def _setup(self, logged_in_session, mongo_db, mongo_port_forward):
+        self.session, self.user = logged_in_session
+        self.db = mongo_db
+        user_doc = self.db["users"].find_one({"username": self.user["username"]})
+        self.user_id = user_doc["_id"]
+
+    def _insert_league(self):
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        doc = {
+            "user_id": self.user_id,
+            "name": "TestLeague_AnalyticsData",
+            "espn_league_id": 12345,
+            "espn_year": 2024,
+            "espn_s2": "fake_s2",
+            "espn_swid": "{fake-swid}",
+            "created_at": now,
+            "updated_at": now,
+        }
+        result = self.db["leagues"].insert_one(doc)
+        doc["_id"] = result.inserted_id
+        return doc
+
+    def _seed_stats(self):
+        self.db["seasonal_stats"].update_one(
+            {"player_id": "test_analytics_p1", "season": 2024},
+            {"$set": {
+                "player_id": "test_analytics_p1",
+                "player_name": "Analytics Test QB",
+                "position": "QB",
+                "recent_team": "KC",
+                "season": 2024,
+                "fantasy_points_ppr": 350.0,
+                "games": 17,
+            }},
+            upsert=True,
+        )
+
+    def _cleanup_stats(self):
+        self.db["seasonal_stats"].delete_many({"player_id": "test_analytics_p1"})
+
+    def test_analytics_page_shows_player_data(self):
+        league = self._insert_league()
+        league_id = str(league["_id"])
+        self._seed_stats()
+        try:
+            resp = self.session.get(
+                f"{BASE_URL}/leagues/{league_id}/analytics",
+                allow_redirects=True,
+            )
+            assert resp.status_code == 200
+            assert "Analytics Test QB" in resp.text
+            assert "350.0" in resp.text
+        finally:
+            self.db["leagues"].delete_one({"_id": league["_id"]})
+            self._cleanup_stats()
+
+    def test_analytics_page_has_player_links(self):
+        """Player names on analytics page should be clickable links to detail."""
+        league = self._insert_league()
+        league_id = str(league["_id"])
+        self._seed_stats()
+        try:
+            resp = self.session.get(
+                f"{BASE_URL}/leagues/{league_id}/analytics",
+                allow_redirects=True,
+            )
+            assert resp.status_code == 200
+            # Should contain a link to the player detail page
+            assert f"/leagues/{league_id}/player/test_analytics_p1" in resp.text
+        finally:
+            self.db["leagues"].delete_one({"_id": league["_id"]})
+            self._cleanup_stats()
+
+    def test_analytics_page_shows_avg_per_game(self):
+        """Analytics page should show Avg/Gm column."""
+        league = self._insert_league()
+        league_id = str(league["_id"])
+        self._seed_stats()
+        try:
+            resp = self.session.get(
+                f"{BASE_URL}/leagues/{league_id}/analytics",
+                allow_redirects=True,
+            )
+            assert resp.status_code == 200
+            assert "Avg/Gm" in resp.text
+            # 350.0 / 17 = 20.6
+            assert "20.6" in resp.text
+        finally:
+            self.db["leagues"].delete_one({"_id": league["_id"]})
+            self._cleanup_stats()

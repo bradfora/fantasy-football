@@ -222,7 +222,24 @@ def roster(league_id, team_id):
     )
     bench = [p for p in team.roster if p.lineupSlot == "BE"]
     ir = [p for p in team.roster if p.lineupSlot == "IR"]
-    return render_template("roster.html", team=team, starters=starters, bench=bench, ir=ir, display_slot=display_slot, league_doc=league_doc)
+
+    # Build player_links: ESPN player name -> nfl_data_py player_id
+    db = _get_db()
+    season = league_doc["espn_year"]
+    player_names = [p.name for p in team.roster]
+    player_links = {}
+    if player_names:
+        matches = db["seasonal_stats"].find(
+            {"player_name": {"$in": player_names}, "season": season},
+            {"player_name": 1, "player_id": 1, "_id": 0},
+        )
+        for m in matches:
+            player_links[m["player_name"]] = m["player_id"]
+
+    return render_template(
+        "roster.html", team=team, starters=starters, bench=bench, ir=ir,
+        display_slot=display_slot, league_doc=league_doc, player_links=player_links,
+    )
 
 
 @app.route("/leagues/<league_id>/analytics")
@@ -235,6 +252,54 @@ def analytics(league_id):
     rankings = get_positional_rankings(_get_db(), season)
 
     return render_template("analytics.html", league_doc=league_doc, rankings=rankings, season=season)
+
+
+@app.route("/leagues/<league_id>/player/<player_id>")
+@login_required
+def player_detail(league_id, player_id):
+    league_doc = _get_user_league(league_id)
+    season = league_doc["espn_year"]
+
+    from analytics.basic_stats import get_player_summary, get_position_averages
+    summary = get_player_summary(_get_db(), player_id, season)
+    if not summary:
+        abort(404)
+    pos_averages = get_position_averages(_get_db(), season)
+    return render_template(
+        "player_detail.html",
+        league_doc=league_doc, player=summary, pos_averages=pos_averages, season=season,
+    )
+
+
+@app.route("/leagues/<league_id>/team/<int:team_id>/analytics")
+@login_required
+def team_analytics(league_id, team_id):
+    league_doc = _get_user_league(league_id)
+    espn_league = get_espn_league(league_doc)
+    team = next((t for t in espn_league.teams if t.team_id == team_id), None)
+    if team is None:
+        abort(404)
+    season = league_doc["espn_year"]
+    roster = [
+        {
+            "name": p.name,
+            "position": p.position,
+            "lineupSlot": p.lineupSlot,
+            "proTeam": p.proTeam,
+            "total_points": p.total_points,
+            "avg_points": p.avg_points,
+        }
+        for p in team.roster
+    ]
+
+    from analytics.basic_stats import analyze_roster, get_position_averages
+    analysis = analyze_roster(_get_db(), roster, season)
+    pos_averages = get_position_averages(_get_db(), season)
+    return render_template(
+        "team_analytics.html",
+        league_doc=league_doc, team=team, analysis=analysis,
+        pos_averages=pos_averages, season=season,
+    )
 
 
 if __name__ == "__main__":

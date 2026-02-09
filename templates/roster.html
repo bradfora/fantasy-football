@@ -12,6 +12,7 @@
             &nbsp;{{ "%.1f"|format(team.points_for) }} PF
             &middot; {{ "%.1f"|format(team.points_against) }} PA
             &middot; #{{ team.standing }} overall
+            &nbsp;<a href="{{ url_for('team_analytics', league_id=league_doc._id|string, team_id=team.team_id) }}" class="btn" style="font-size:0.8rem; padding:0.3rem 0.8rem;">Team Analytics</a>
         </p>
     </div>
 </div>
@@ -35,7 +36,11 @@
             <td><span class="slot-badge">{{ display_slot(player.lineupSlot) }}</span></td>
             {% endif %}
             <td>
+                {% if player_links is defined and player_links.get(player.name) %}
+                <a href="{{ url_for('player_detail', league_id=league_doc._id|string, player_id=player_links[player.name]) }}" class="player-name">{{ player.name }}</a>
+                {% else %}
                 <span class="player-name">{{ player.name }}</span>
+                {% endif %}
                 {% if player.injuryStatus and player.injuryStatus not in ("ACTIVE", "NORMAL") %}
                     <span class="injury-badge injury-{{ player.injuryStatus }} {% if player.injuryStatus not in ('OUT','DOUBTFUL','QUESTIONABLE','PROBABLE') %}injury-default{% endif %}">
                         {{ player.injuryStatus }}
@@ -94,7 +99,13 @@
         <tbody>
             {% for player in ir %}
             <tr>
-                <td><span class="player-name">{{ player.name }}</span></td>
+                <td>
+                    {% if player_links is defined and player_links.get(player.name) %}
+                    <a href="{{ url_for('player_detail', league_id=league_doc._id|string, player_id=player_links[player.name]) }}" class="player-name">{{ player.name }}</a>
+                    {% else %}
+                    <span class="player-name">{{ player.name }}</span>
+                    {% endif %}
+                </td>
                 <td><span class="pro-team">{{ player.position }}</span></td>
                 <td><span class="pro-team">{{ player.proTeam }}</span></td>
                 <td>

@@ -125,6 +125,8 @@ def _cleanup_test_data(mongo_db, mongo_port_forward):
     yield
     mongo_db["users"].delete_many({"username": {"$regex": "^testuser_"}})
     mongo_db["leagues"].delete_many({"name": {"$regex": "^TestLeague_"}})
+    mongo_db["seasonal_stats"].delete_many({"player_id": {"$regex": "^(test_|sel_test_)"}})
+    mongo_db["weekly_stats"].delete_many({"player_id": {"$regex": "^(test_|sel_test_)"}})
 
 
 # ---------------------------------------------------------------------------

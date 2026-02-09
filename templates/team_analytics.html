@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}{{ team.team_name }} - Analytics{% endblock %}
+{% block content %}
+<a href="{{ url_for('roster', league_id=league_doc._id|string, team_id=team.team_id) }}" class="back-link">&larr; Back to roster</a>
+
+<div class="page-header" style="display:flex; align-items:center; gap:1rem;">
+    <img class="team-logo" src="{{ team.logo_url }}" alt="" style="width:56px; height:56px; border-radius:14px;">
+    <div>
+        <h2>{{ team.team_name }} Analytics</h2>
+        <p class="subtitle">
+            <span class="stat-pill">{{ team.wins }}-{{ team.losses }}{% if team.ties %}-{{ team.ties }}{% endif %}</span>
+            &nbsp;{{ season }} Season
+        </p>
+    </div>
+</div>
+
+<!-- Suggestions -->
+{% if analysis.suggestions %}
+<div class="card">
+    <div class="card-header">Suggestions</div>
+    <div style="padding:1rem 1.25rem; display:flex; flex-direction:column; gap:0.5rem;">
+        {% for suggestion in analysis.suggestions %}
+        <div class="suggestion-alert">{{ suggestion }}</div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Roster Breakdown -->
+<div class="card">
+    <div class="card-header">
+        Roster Breakdown
+        <span class="badge">{{ analysis.players|length }} players</span>
+    </div>
+    {% macro roster_table(players, label) %}
+    {% if players %}
+    <div style="padding:0.5rem 1.25rem 0;">
+        <span style="font-weight:700; font-size:0.8rem; text-transform:uppercase; color:#b2bec3;">{{ label }}</span>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Player</th>
+                <th>Pos</th>
+                <th>Slot</th>
+                <th style="text-align:right">Season Pts</th>
+                <th style="text-align:right">Avg/Gm</th>
+                <th style="text-align:right">Last 3 Avg</th>
+                <th>Trend</th>
+                <th style="text-align:right">Pos Rank</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in players %}
+            <tr>
+                <td>
+                    {% if p.player_id %}
+                    <a href="{{ url_for('player_detail', league_id=league_doc._id|string, player_id=p.player_id) }}" class="player-name">{{ p.name }}</a>
+                    {% else %}
+                    <span class="player-name">{{ p.name }}</span>
+                    {% endif %}
+                </td>
+                <td><span class="pro-team">{{ p.position }}</span></td>
+                <td><span class="slot-badge">{{ p.lineup_slot }}</span></td>
+                <td style="text-align:right">
+                    {% if p.season_points is not none %}
+                    <span class="pts">{{ p.season_points }}</span>
+                    {% else %}
+                    {{ "%.1f"|format(p.espn_total) }}
+                    {% endif %}
+                </td>
+                <td style="text-align:right">
+                    {% if p.season_avg is not none %}
+                    {{ p.season_avg }}
+                    {% else %}
+                    {{ "%.1f"|format(p.espn_avg) }}
+                    {% endif %}
+                </td>
+                <td style="text-align:right">
+                    {% if p.last_3_avg is not none %}
+                    {{ p.last_3_avg }}
+                    {% else %}
+                    —
+                    {% endif %}
+                </td>
+                <td>
+                    {% if p.trend == "trending_up" %}
+                        <span class="trend-arrow trend-up">&#9650;</span>
+                    {% elif p.trend == "trending_down" %}
+                        <span class="trend-arrow trend-down">&#9660;</span>
+                    {% elif p.trend == "steady" %}
+                        <span class="trend-arrow trend-steady">&#9654;</span>
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td style="text-align:right">
+                    {% if p.pos_rank is not none %}
+                    {{ p.position }}{{ p.pos_rank }}
+                    {% else %}
+                    —
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    {% endmacro %}
+
+    {{ roster_table(analysis.players|selectattr("lineup_slot", "ne", "BE")|selectattr("lineup_slot", "ne", "IR")|list, "Starters") }}
+    {{ roster_table(analysis.players|selectattr("lineup_slot", "equalto", "BE")|list, "Bench") }}
+</div>
+
+{% endblock %}

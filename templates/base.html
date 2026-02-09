@@ -266,6 +266,68 @@
             font-size: 0.9rem;
             font-weight: 600;
         }
+
+        /* Analytics: stat blocks */
+        .stat-block { text-align: center; }
+        .stat-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #b2bec3;
+            margin-bottom: 0.2rem;
+        }
+        .stat-value {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: #2d3436;
+        }
+        .stat-compare {
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 0.15rem;
+        }
+        .compare-above { color: #00b894; }
+        .compare-below { color: #d63031; }
+
+        /* Trend arrows */
+        .trend-arrow {
+            display: inline-block;
+            font-weight: 700;
+            font-size: 0.85rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+        }
+        .trend-up { color: #00b894; background: #e6f9f3; }
+        .trend-down { color: #d63031; background: #fde8e8; }
+        .trend-steady { color: #636e72; background: #f0f2f5; }
+
+        /* Bar chart cells */
+        .bar-cell {
+            height: 20px;
+            background: #f0f2f5;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .bar {
+            height: 100%;
+            border-radius: 4px;
+            min-width: 2px;
+            transition: width 0.3s;
+        }
+        .bar-above { background: #00b894; }
+        .bar-below { background: #fab1a0; }
+
+        /* Suggestion alerts */
+        .suggestion-alert {
+            background: #fff3cd;
+            color: #856404;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border-left: 4px solid #ffc107;
+        }
     </style>
 </head>
 <body>

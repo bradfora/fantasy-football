@@ -662,3 +662,54 @@ class TestRosterRoute:
         )
         response = logged_in_client.get(f"/leagues/{other_league['_id']}/team/1")
         assert response.status_code == 403
+
+
+class TestPlayerDetailRoute:
+    def test_player_detail_renders(self, logged_in_with_league, mock_db):
+        client, league = logged_in_with_league
+        # Seed analytics data
+        mock_db["seasonal_stats"].insert_one({
+            "player_id": "p1", "player_name": "Patrick Mahomes", "position": "QB",
+            "recent_team": "KC", "season": 2024, "fantasy_points_ppr": 350.0, "games": 17,
+        })
+        for week in range(1, 4):
+            mock_db["weekly_stats"].insert_one({
+                "player_id": "p1", "player_name": "Patrick Mahomes", "position": "QB",
+                "season": 2024, "week": week, "opponent_team": f"OPP{week}",
+                "fantasy_points_ppr": 20.0 + week,
+            })
+        response = client.get(f"/leagues/{league['_id']}/player/p1")
+        assert response.status_code == 200
+        html = response.data.decode()
+        assert "Patrick Mahomes" in html
+        assert "Season Summary" in html
+
+    def test_player_detail_not_found(self, logged_in_with_league):
+        client, league = logged_in_with_league
+        response = client.get(f"/leagues/{league['_id']}/player/nonexistent")
+        assert response.status_code == 404
+
+
+class TestTeamAnalyticsRoute:
+    def test_team_analytics_renders(self, logged_in_with_league, mock_db):
+        client, league = logged_in_with_league
+        roster = [make_player(name="Patrick Mahomes", position="QB", lineupSlot="QB",
+                              proTeam="KC", total_points=350.0, avg_points=20.6)]
+        team = make_team(team_id=1, roster=roster)
+        mock_db["seasonal_stats"].insert_one({
+            "player_id": "p1", "player_name": "Patrick Mahomes", "position": "QB",
+            "recent_team": "KC", "season": 2024, "fantasy_points_ppr": 350.0, "games": 17,
+        })
+        with patch("app.get_espn_league", return_value=make_espn_league([team])):
+            response = client.get(f"/leagues/{league['_id']}/team/1/analytics")
+        assert response.status_code == 200
+        html = response.data.decode()
+        assert "Analytics" in html
+        assert "Roster Breakdown" in html
+
+    def test_team_analytics_invalid_team(self, logged_in_with_league):
+        client, league = logged_in_with_league
+        team = make_team(team_id=1)
+        with patch("app.get_espn_league", return_value=make_espn_league([team])):
+            response = client.get(f"/leagues/{league['_id']}/team/999/analytics")
+        assert response.status_code == 404

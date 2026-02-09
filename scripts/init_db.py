@@ -33,6 +33,27 @@ def init_db(uri=None):
     )
     print("Created compound unique index on leagues.(user_id, espn_league_id, espn_year)")
 
+    # Analytics collection indexes
+    db.seasonal_stats.create_index(
+        [("player_id", 1), ("season", 1)], unique=True
+    )
+    print("Created unique index on seasonal_stats.(player_id, season)")
+
+    db.seasonal_stats.create_index(
+        [("season", 1), ("position", 1), ("fantasy_points_ppr", -1)]
+    )
+    print("Created index on seasonal_stats.(season, position, fantasy_points_ppr)")
+
+    db.weekly_stats.create_index(
+        [("player_id", 1), ("season", 1), ("week", 1)], unique=True
+    )
+    print("Created unique index on weekly_stats.(player_id, season, week)")
+
+    db.weekly_stats.create_index(
+        [("season", 1), ("position", 1)]
+    )
+    print("Created index on weekly_stats.(season, position)")
+
     print("Database initialization complete.")
     return db
 

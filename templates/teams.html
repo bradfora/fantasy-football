@@ -3,7 +3,10 @@
 {% block content %}
 <div class="page-header">
     <h2>League Standings</h2>
-    <p class="subtitle">{{ teams|length }} teams &middot; {{ teams[0].wins + teams[0].losses + teams[0].ties }} games played</p>
+    <p class="subtitle">
+        {{ teams|length }} teams &middot; {{ teams[0].wins + teams[0].losses + teams[0].ties }} games played
+        &nbsp;<a href="{{ url_for('analytics', league_id=league_doc._id|string) }}" class="btn" style="font-size:0.8rem; padding:0.3rem 0.8rem;">Analytics</a>
+    </p>
 </div>
 
 <div class="card">
