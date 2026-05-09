@@ -1,6 +1,6 @@
 import os
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import mongomock
 import pytest
@@ -713,3 +713,135 @@ class TestTeamAnalyticsRoute:
         with patch("app.get_espn_league", return_value=make_espn_league([team])):
             response = client.get(f"/leagues/{league['_id']}/team/999/analytics")
         assert response.status_code == 404
+
+
+class TestPlayerProjectionRoute:
+    def _seed_player_data(self, mock_db):
+        """Seed the player data needed for projection routes."""
+        mock_db["seasonal_stats"].insert_one({
+            "player_id": "p1", "player_name": "Patrick Mahomes", "position": "QB",
+            "recent_team": "KC", "season": 2024, "fantasy_points_ppr": 350.0, "games": 17,
+        })
+        for week in range(1, 7):
+            mock_db["weekly_stats"].insert_one({
+                "player_id": "p1", "player_name": "Patrick Mahomes", "position": "QB",
+                "season": 2024, "week": week, "opponent_team": f"OPP{week}",
+                "fantasy_points_ppr": 20.0 + week,
+            })
+
+    def _mock_model(self):
+        """Create a mock projection model."""
+        model = SimpleNamespace(
+            predict=lambda db, pid, s, w: {
+                "projected_points": 22.5,
+                "confidence_low": 15.0,
+                "confidence_high": 30.0,
+            },
+            predict_remaining_season=lambda db, pid, s, cw, tw=17: {
+                "weekly": [
+                    {"week": w, "projected_points": 22.5,
+                     "confidence_low": 15.0, "confidence_high": 30.0}
+                    for w in range(cw + 1, tw + 1)
+                ],
+                "remaining_total": 22.5 * (tw - cw),
+                "season_total": 350.0 + 22.5 * (tw - cw),
+            },
+        )
+        return model
+
+    def _mock_clusterer(self):
+        """Create a mock clusterer."""
+        return SimpleNamespace(
+            classify_player=lambda db, pid, s: {
+                "cluster_id": 0,
+                "cluster_label": "High-Floor Consistent",
+                "characteristics": {
+                    "avg_points": 22.0, "std_dev": 3.0, "floor": 15.0,
+                    "ceiling": 30.0, "snap_pct_avg": 0.95, "consistency_score": 0.14,
+                },
+                "cluster_center": {
+                    "avg_points": 20.0, "std_dev": 4.0, "floor": 12.0,
+                    "ceiling": 28.0, "snap_pct_avg": 0.90, "consistency_score": 0.2,
+                },
+            },
+            get_similar_players=lambda db, pid, s, limit=5: [
+                {"player_id": "p2", "player_name": "Josh Allen",
+                 "avg_points": 21.0, "cluster_label": "High-Floor Consistent"},
+            ],
+        )
+
+    def test_projection_page_renders_with_model(self, logged_in_with_league, mock_db):
+        client, league = logged_in_with_league
+        self._seed_player_data(mock_db)
+        model = self._mock_model()
+        clusterer = self._mock_clusterer()
+
+        mock_proj = MagicMock(return_value={
+            "projected_points": 22.5, "confidence_low": 15.0,
+            "confidence_high": 30.0, "display_points": 22.5,
+        })
+        mock_remaining = MagicMock(return_value={
+            "weekly": [{"week": 7, "projected_points": 22.5,
+                       "confidence_low": 15.0, "confidence_high": 30.0,
+                       "opponent": "BAL", "home": True, "matchup_label": "medium"}],
+            "remaining_total": 247.5, "season_total": 597.5,
+        })
+        mock_sim = MagicMock(return_value={
+            "percentiles": {"p10": 200, "p25": 250, "p50": 300, "p75": 350, "p90": 400},
+            "histogram": [{"bin_start": 200, "bin_end": 220, "count": 50}],
+            "upside_pct": 25.0, "bust_pct": 25.0, "n_simulations": 1000,
+            "actual_so_far": 150.0,
+        })
+
+        with patch("app._get_projection_model", return_value=model), \
+             patch("app._get_player_clusterer", return_value=clusterer), \
+             patch("analytics.projections.get_player_projection", mock_proj), \
+             patch("analytics.projections.get_remaining_season_projection", mock_remaining), \
+             patch("analytics.projections.run_monte_carlo_simulation", mock_sim):
+            response = client.get(f"/leagues/{league['_id']}/player/p1/projection")
+        assert response.status_code == 200
+        html = response.data.decode()
+        assert "Patrick Mahomes" in html
+        assert "Projections" in html
+        assert "Performance Projection" in html
+
+    def test_projection_page_no_model_graceful(self, logged_in_with_league, mock_db):
+        client, league = logged_in_with_league
+        self._seed_player_data(mock_db)
+
+        with patch("app._get_projection_model", return_value=None), \
+             patch("app._get_player_clusterer", return_value=None):
+            response = client.get(f"/leagues/{league['_id']}/player/p1/projection")
+        assert response.status_code == 200
+        html = response.data.decode()
+        assert "train_models" in html or "No trained projection model" in html
+
+    def test_projection_page_nonexistent_player_404(self, logged_in_with_league):
+        client, league = logged_in_with_league
+        with patch("app._get_projection_model", return_value=None):
+            response = client.get(f"/leagues/{league['_id']}/player/nonexistent/projection")
+        assert response.status_code == 404
+
+    def test_projection_api_returns_json(self, logged_in_with_league, mock_db):
+        client, league = logged_in_with_league
+        self._seed_player_data(mock_db)
+        model = self._mock_model()
+
+        with patch("app._get_projection_model", return_value=model):
+            response = client.get("/api/projection/p1?season=2024&week=7&risk=medium")
+        assert response.status_code == 200
+        data = response.get_json()
+        assert "projected_points" in data
+        assert "display_points" in data
+        assert "confidence_low" in data
+        assert "confidence_high" in data
+
+    def test_projection_api_invalid_risk_400(self, logged_in_with_league):
+        client, league = logged_in_with_league
+        response = client.get("/api/projection/p1?season=2024&week=7&risk=invalid")
+        assert response.status_code == 400
+
+    def test_projection_api_unauthenticated_redirects(self, client):
+        response = client.get("/api/projection/p1?season=2024&week=7&risk=medium")
+        assert response.status_code == 302
+        assert "login" in response.headers["Location"]

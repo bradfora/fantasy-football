@@ -4,7 +4,10 @@ import mongomock
 import pandas as pd
 import pytest
 
-from analytics.data_pipeline import fetch_seasonal_data, fetch_weekly_data, ingest_seasonal_stats, ingest_weekly_stats
+from analytics.data_pipeline import (
+    fetch_seasonal_data, fetch_weekly_data, ingest_seasonal_stats, ingest_weekly_stats,
+    ingest_schedules, ingest_snap_counts,
+)
 from analytics.basic_stats import (
     get_top_scorers, get_player_weekly_trend, get_positional_rankings,
     get_player_summary, get_position_averages, analyze_roster,
@@ -267,3 +270,42 @@ class TestPlayerSummary:
         result = analyze_roster(db_with_full_data, roster, 2024)
         assert len(result["suggestions"]) > 0
         assert any("Consider starting Tyreek Hill over Weak WR" in s for s in result["suggestions"])
+
+
+# --- Schedule & Snap Count pipeline tests ---
+
+
+class TestSchedulePipeline:
+    def test_ingest_schedules(self, db):
+        mock_df = pd.DataFrame({
+            "game_id": ["2024_01_KC_BAL", "2024_01_MIA_BUF"],
+            "season": [2024, 2024],
+            "week": [1, 1],
+            "home_team": ["KC", "MIA"],
+            "away_team": ["BAL", "BUF"],
+        })
+        with patch("analytics.data_pipeline.fetch_schedule_data", return_value=mock_df):
+            count = ingest_schedules(db, [2024])
+        assert count == 2
+        assert db["schedules"].count_documents({}) == 2
+
+    def test_ingest_snap_counts(self, db):
+        mock_df = pd.DataFrame({
+            "player": ["Patrick Mahomes", "Patrick Mahomes"],
+            "season": [2024, 2024],
+            "week": [1, 2],
+            "offense_pct": [0.95, 0.92],
+        })
+        with patch("analytics.data_pipeline.fetch_snap_count_data", return_value=mock_df):
+            count = ingest_snap_counts(db, [2024])
+        assert count == 2
+        assert db["snap_counts"].count_documents({}) == 2
+
+    def test_ingest_empty_dataframe(self, db):
+        with patch("analytics.data_pipeline.fetch_schedule_data", return_value=pd.DataFrame()):
+            count = ingest_schedules(db, [2024])
+        assert count == 0
+
+        with patch("analytics.data_pipeline.fetch_snap_count_data", return_value=pd.DataFrame()):
+            count = ingest_snap_counts(db, [2024])
+        assert count == 0

@@ -37,6 +37,7 @@
                 <td>
                     {% if player.player_id %}
                     <a href="{{ url_for('player_detail', league_id=league_doc._id|string, player_id=player.player_id) }}" class="player-name">{{ player.player_name }}</a>
+                    <a href="{{ url_for('player_projection', league_id=league_doc._id|string, player_id=player.player_id) }}" style="font-size:0.75rem; font-weight:600; margin-left:0.4rem;">Proj</a>
                     {% else %}
                     <span class="player-name">{{ player.player_name }}</span>
                     {% endif %}

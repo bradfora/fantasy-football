@@ -12,6 +12,9 @@
             &middot; {{ season }} Season
         </p>
     </div>
+    <div style="margin-left:auto;">
+        <a href="{{ url_for('player_projection', league_id=league_doc._id|string, player_id=player.player_id) }}" class="btn">View Projections</a>
+    </div>
 </div>
 
 <!-- Season Summary -->

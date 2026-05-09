@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+{% block title %}{{ player.player_name }} - Projections{% endblock %}
+{% block content %}
+<a href="{{ url_for('player_detail', league_id=league_doc._id|string, player_id=player.player_id) }}" class="back-link">&larr; Back to player detail</a>
+
+<!-- Player Header -->
+<div class="page-header" style="display:flex; align-items:center; gap:1rem;">
+    <div>
+        <h2>{{ player.player_name }}</h2>
+        <p class="subtitle">
+            <span class="slot-badge">{{ player.position }}</span>
+            <span class="pro-team" style="margin-left:0.3rem;">{{ player.recent_team }}</span>
+            &middot; {{ season }} Season &middot; Projections
+        </p>
+    </div>
+</div>
+
+<!-- Season Summary -->
+<div class="card">
+    <div class="card-header">Season Summary</div>
+    <div style="padding:1.25rem; display:grid; grid-template-columns:repeat(auto-fit, minmax(120px,1fr)); gap:1rem;">
+        <div class="stat-block">
+            <div class="stat-label">Total Points</div>
+            <div class="stat-value">{{ player.total_points }}</div>
+        </div>
+        <div class="stat-block">
+            <div class="stat-label">Avg/Game</div>
+            <div class="stat-value">{{ player.avg_points }}</div>
+        </div>
+        <div class="stat-block">
+            <div class="stat-label">Games</div>
+            <div class="stat-value">{{ player.games }}</div>
+        </div>
+        <div class="stat-block">
+            <div class="stat-label">Pos Rank</div>
+            <div class="stat-value">{{ player.position }}{{ player.pos_rank }}</div>
+        </div>
+        <div class="stat-block">
+            <div class="stat-label">Floor</div>
+            <div class="stat-value">{{ player.floor }}</div>
+        </div>
+        <div class="stat-block">
+            <div class="stat-label">Ceiling</div>
+            <div class="stat-value">{{ player.ceiling }}</div>
+        </div>
+        <div class="stat-block">
+            <div class="stat-label">Consistency</div>
+            <div class="stat-value">&plusmn;{{ player.std_dev }}</div>
+        </div>
+    </div>
+</div>
+
+{% if has_model %}
+<!-- Performance Projection -->
+<div class="card">
+    <div class="card-header">Performance Projection</div>
+    <div style="padding:1.25rem;">
+        <!-- Risk Slider -->
+        <div style="margin-bottom:1rem;">
+            <div class="stat-label">Risk Level</div>
+            <div class="risk-slider-container">
+                <input type="range" id="risk-slider" min="0" max="2" value="1" step="1">
+                <span id="risk-label" style="font-weight:700; font-size:0.9rem;">Medium</span>
+            </div>
+            <div class="risk-slider-container">
+                <div class="risk-labels">
+                    <span>Conservative</span>
+                    <span>Medium</span>
+                    <span>Aggressive</span>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:1rem;">
+            {% if projection %}
+            <div class="stat-block">
+                <div class="stat-label">Next Week Projected</div>
+                <div class="projection-value" id="proj-value">{{ "%.1f"|format(projection.projected_points) }}</div>
+                <div class="confidence-range" id="proj-range">{{ "%.1f"|format(projection.confidence_low) }} - {{ "%.1f"|format(projection.confidence_high) }}</div>
+            </div>
+            {% endif %}
+
+            {% if next_matchup %}
+            <div class="stat-block">
+                <div class="stat-label">Next Matchup</div>
+                <div class="stat-value">{{ "@ " if not next_matchup.home else "vs " }}{{ next_matchup.opponent }}</div>
+                {% if next_matchup.difficulty %}
+                <span class="matchup-badge matchup-{{ next_matchup.difficulty.label }}">
+                    {{ next_matchup.difficulty.label }}
+                </span>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if remaining %}
+            <div class="stat-block">
+                <div class="stat-label">Projected Season Total</div>
+                <div class="stat-value">{{ "%.1f"|format(remaining.season_total) }}</div>
+                <div class="confidence-range">{{ "%.1f"|format(remaining.remaining_total) }} remaining</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Weekly Scoring & Projection Chart -->
+{% if chart_actual or chart_projected %}
+<div class="card">
+    <div class="card-header">Weekly Scoring & Projection</div>
+    <div class="chart-container">
+        <canvas id="projectionChart" height="120"></canvas>
+    </div>
+</div>
+{% endif %}
+
+<!-- Monte Carlo Simulation -->
+{% if simulation %}
+<div class="card">
+    <div class="card-header">Season Outcome Simulation <span class="badge">{{ simulation.n_simulations }} simulations</span></div>
+    <div style="padding:1.25rem;">
+        <div class="chart-container">
+            <canvas id="distributionChart" height="100"></canvas>
+        </div>
+        <div class="percentile-grid" style="margin-top:1rem;">
+            <div class="percentile-item">
+                <div class="percentile-label">P10 (Floor)</div>
+                <div class="percentile-value">{{ simulation.percentiles.p10 }}</div>
+            </div>
+            <div class="percentile-item">
+                <div class="percentile-label">P25</div>
+                <div class="percentile-value">{{ simulation.percentiles.p25 }}</div>
+            </div>
+            <div class="percentile-item">
+                <div class="percentile-label">P50 (Median)</div>
+                <div class="percentile-value" style="color:#6c5ce7;">{{ simulation.percentiles.p50 }}</div>
+            </div>
+            <div class="percentile-item">
+                <div class="percentile-label">P75</div>
+                <div class="percentile-value">{{ simulation.percentiles.p75 }}</div>
+            </div>
+            <div class="percentile-item">
+                <div class="percentile-label">P90 (Ceiling)</div>
+                <div class="percentile-value">{{ simulation.percentiles.p90 }}</div>
+            </div>
+        </div>
+        <div style="display:flex; gap:2rem; justify-content:center; margin-top:1rem;">
+            <div class="stat-block">
+                <div class="stat-label">Upside Probability</div>
+                <div class="stat-value" style="color:#00b894;">{{ simulation.upside_pct }}%</div>
+            </div>
+            <div class="stat-block">
+                <div class="stat-label">Bust Risk</div>
+                <div class="stat-value" style="color:#d63031;">{{ simulation.bust_pct }}%</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<!-- No Model Message -->
+<div class="card">
+    <div class="no-model-msg">
+        <p>No trained projection model found. Train the model to enable projections, simulations, and player archetypes.</p>
+        <code>python scripts/train_models.py --seasons 2022 2023 --evaluate-on {{ season }}</code>
+    </div>
+</div>
+{% endif %}
+
+<!-- Player Archetype -->
+{% if cluster_info %}
+<div class="card">
+    <div class="card-header">Player Archetype</div>
+    <div style="padding:1.25rem;">
+        <div style="display:flex; gap:2rem; align-items:flex-start; flex-wrap:wrap;">
+            <div style="flex:1; min-width:200px;">
+                <div class="stat-label">Archetype</div>
+                <div class="stat-value" style="font-size:1.2rem;">{{ cluster_info.cluster_label }}</div>
+                <div style="margin-top:1rem;">
+                    <canvas id="radarChart" height="200"></canvas>
+                </div>
+            </div>
+            {% if similar_players %}
+            <div style="flex:1; min-width:200px;">
+                <div class="stat-label">Similar Players</div>
+                <div style="margin-top:0.5rem;">
+                    {% for sp in similar_players %}
+                    <div style="padding:0.3rem 0;">
+                        <a href="{{ url_for('player_projection', league_id=league_doc._id|string, player_id=sp.player_id) }}">{{ sp.player_name }}</a>
+                        <span class="pro-team" style="margin-left:0.3rem;">{{ "%.1f"|format(sp.avg_points) }} avg</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Remaining Schedule -->
+{% if remaining and remaining.weekly %}
+<div class="card">
+    <div class="card-header">Remaining Schedule</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width:60px">Week</th>
+                <th>Opponent</th>
+                <th>Matchup</th>
+                <th style="text-align:right">Projected</th>
+                <th style="text-align:right">Range</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for w in remaining.weekly %}
+            <tr>
+                <td><span class="stat-pill">{{ w.week }}</span></td>
+                <td>
+                    {% if w.opponent %}
+                    <span class="pro-team">{{ "@ " if not w.home else "vs " }}{{ w.opponent }}</span>
+                    {% else %}
+                    <span class="pro-team">TBD</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if w.matchup_label %}
+                    <span class="matchup-badge matchup-{{ w.matchup_label }}">{{ w.matchup_label }}</span>
+                    {% else %}
+                    &mdash;
+                    {% endif %}
+                </td>
+                <td style="text-align:right">
+                    <span class="pts">{{ "%.1f"|format(w.projected_points) }}</span>
+                </td>
+                <td style="text-align:right">
+                    <span class="confidence-range">{{ "%.1f"|format(w.confidence_low) }}-{{ "%.1f"|format(w.confidence_high) }}</span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Weekly Scoring Table -->
+{% if player.weekly %}
+<div class="card">
+    <div class="card-header">Weekly Scoring History</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width:60px">Week</th>
+                <th>Opponent</th>
+                <th style="text-align:right">Points</th>
+                <th style="width:40%">Performance</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% set max_pts = player.weekly|map(attribute='fantasy_points_ppr')|select('number')|list|max if player.weekly else 1 %}
+            {% for week in player.weekly %}
+            {% set pts = week.fantasy_points_ppr or 0 %}
+            <tr>
+                <td><span class="stat-pill">{{ week.week }}</span></td>
+                <td><span class="pro-team">{{ week.opponent_team or '—' }}</span></td>
+                <td style="text-align:right">
+                    <span class="pts {% if pts > player.avg_points %}pts-high{% endif %}">
+                        {{ "%.1f"|format(pts) }}
+                    </span>
+                </td>
+                <td>
+                    <div class="bar-cell">
+                        <div class="bar {% if pts >= player.avg_points %}bar-above{% else %}bar-below{% endif %}"
+                             style="width: {{ (pts / max_pts * 100) if max_pts > 0 else 0 }}%;">
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% if has_model %}
+    // Projection Chart
+    var chartActual = {{ chart_actual | tojson }};
+    var chartProjected = {{ chart_projected | tojson }};
+    if (chartActual.length > 0 || chartProjected.length > 0) {
+        createProjectionChart('projectionChart', chartActual, chartProjected, {{ player.avg_points }});
+    }
+
+    // Distribution Chart
+    {% if simulation %}
+    var histogramData = {{ simulation.histogram | tojson }};
+    var percentiles = {{ simulation.percentiles | tojson }};
+    createDistributionChart('distributionChart', histogramData, percentiles);
+    {% endif %}
+
+    // Risk Slider
+    initRiskSlider('risk-slider', '{{ player.player_id }}', {{ season }}, {{ current_week + 1 }});
+    {% endif %}
+
+    // Radar Chart
+    {% if cluster_info %}
+    var playerFeatures = {{ cluster_info.characteristics | tojson }};
+    var clusterCenter = {{ cluster_info.cluster_center | tojson }};
+    createClusterRadarChart('radarChart', playerFeatures, clusterCenter);
+    {% endif %}
+});
+</script>
+{% endblock %}

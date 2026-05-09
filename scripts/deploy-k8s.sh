@@ -17,6 +17,8 @@ kubectl apply -f "$PROJECT_DIR/k8s/mongodb-deployment.yaml"
 kubectl apply -f "$PROJECT_DIR/k8s/mongodb-service.yaml"
 kubectl apply -f "$PROJECT_DIR/k8s/deployment.yaml"
 kubectl apply -f "$PROJECT_DIR/k8s/service.yaml"
+kubectl apply -f "$PROJECT_DIR/k8s/mongo-express-deployment.yaml"
+kubectl apply -f "$PROJECT_DIR/k8s/mongo-express-service.yaml"
 
 echo "==> Restarting fantasy-football deployment to pick up new image..."
 kubectl rollout restart deployment/fantasy-football
@@ -30,4 +32,5 @@ kubectl get pods
 
 echo ""
 echo "App is available at http://localhost:30500"
+echo "Mongo Express is available at http://localhost:30081"
 echo "Run tests with: pytest tests/e2e/ -v"

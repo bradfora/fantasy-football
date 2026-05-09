@@ -167,7 +167,35 @@ Analytics features (positional rankings, player detail pages, team analysis, sta
 
    This ingests seasonal totals and week-by-week stats into the `seasonal_stats` and `weekly_stats` collections. Records are upserted, so it is safe to re-run during the season to pick up updated stats.
 
+   To also load schedule and snap count data (needed for projections):
+
+   ```bash
+   python scripts/load_stats.py --years 2022 2023 2024 --all
+   ```
+
 3. Analytics pages will show data once stats are loaded. If no data is available for a season, the analytics page displays a message with instructions.
+
+## Analytics & Projections
+
+The app includes ML-powered player performance projections using Ridge Regression + Random Forest ensemble models, Monte Carlo season simulations, and K-Means player clustering.
+
+### Setup
+
+1. **Load all data** (seasonal, weekly, schedules, snap counts):
+
+   ```bash
+   python scripts/load_stats.py --years 2022 2023 2024 --all
+   ```
+
+2. **Train the ML models:**
+
+   ```bash
+   python scripts/train_models.py --seasons 2022 2023 --evaluate-on 2024
+   ```
+
+   This trains the point projection model and player clusterers, saving them to `models/`.
+
+3. **Access projections** in the UI by navigating to any league's analytics page, clicking a player name, then clicking "View Projections".
 
 ## Routes
 
@@ -181,6 +209,8 @@ Analytics features (positional rankings, player detail pages, team analysis, sta
 | `GET /leagues/<id>/analytics` | Top players by position for the season |
 | `GET /leagues/<id>/player/<player_id>` | Individual player detail and weekly trend |
 | `GET /leagues/<id>/team/<team_id>/analytics` | Team roster analysis with start/sit suggestions |
+| `GET /leagues/<id>/player/<player_id>/projection` | ML-powered player projections and simulations |
+| `GET /api/projection/<player_id>` | JSON API for projection data (used by risk slider) |
 
 ## Key Concepts
 
@@ -197,7 +227,7 @@ Starters are sorted in this order: QB, RB, WR, TE, FLEX, K, D/ST.
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest test_app.py test_db.py test_analytics.py -v
+python -m pytest test_app.py test_db.py test_analytics.py test_models.py -v
 ```
 
 Tests mock the ESPN API via `unittest.mock.patch` with `SimpleNamespace` objects and use `mongomock` for MongoDB. No ESPN credentials or running MongoDB instance are needed for unit tests.

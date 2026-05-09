@@ -2,6 +2,7 @@
 
 import os
 import sys
+from urllib.parse import quote_plus
 
 from dotenv import load_dotenv
 from pymongo import MongoClient
@@ -10,7 +11,17 @@ load_dotenv()
 
 
 def init_db(uri=None):
-    uri = uri or os.environ.get("MONGODB_URI", "mongodb://localhost:27017/fantasy_football")
+    uri = uri or os.environ.get("MONGODB_URI")
+    if not uri:
+        username = os.environ.get("MONGO_USERNAME")
+        password = os.environ.get("MONGO_PASSWORD")
+        if username and password:
+            uri = (
+                f"mongodb://{quote_plus(username)}:{quote_plus(password)}"
+                f"@localhost:27017/fantasy_football?authSource=admin"
+            )
+        else:
+            uri = "mongodb://localhost:27017/fantasy_football"
     client = MongoClient(uri)
     db = client.get_default_database()
 
@@ -53,6 +64,36 @@ def init_db(uri=None):
         [("season", 1), ("position", 1)]
     )
     print("Created index on weekly_stats.(season, position)")
+
+    # Schedule indexes
+    db.schedules.create_index("game_id", unique=True)
+    print("Created unique index on schedules.game_id")
+
+    db.schedules.create_index([("season", 1), ("week", 1)])
+    print("Created index on schedules.(season, week)")
+
+    # Snap count indexes
+    db.snap_counts.create_index(
+        [("player", 1), ("season", 1), ("week", 1)], unique=True
+    )
+    print("Created unique index on snap_counts.(player, season, week)")
+
+    # Projection cache indexes
+    db.projections.create_index(
+        [("player_id", 1), ("season", 1), ("week", 1)]
+    )
+    print("Created index on projections.(player_id, season, week)")
+
+    db.projections.create_index(
+        [("season", 1), ("week", 1), ("position", 1)]
+    )
+    print("Created index on projections.(season, week, position)")
+
+    # Model metadata indexes
+    db.model_metadata.create_index(
+        [("model_name", 1), ("season", 1)]
+    )
+    print("Created index on model_metadata.(model_name, season)")
 
     print("Database initialization complete.")
     return db

@@ -328,6 +328,92 @@
             font-weight: 600;
             border-left: 4px solid #ffc107;
         }
+
+        /* Matchup difficulty badges */
+        .matchup-badge {
+            display: inline-block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+        .matchup-easy { background: #d4edda; color: #155724; }
+        .matchup-medium { background: #fff3cd; color: #856404; }
+        .matchup-hard { background: #ffe0e0; color: #c0392b; }
+
+        /* Risk slider */
+        .risk-slider-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.5rem 0;
+        }
+        .risk-slider-container input[type="range"] {
+            flex: 1;
+            max-width: 200px;
+            accent-color: #6c5ce7;
+        }
+        .risk-slider-container .risk-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #636e72;
+            max-width: 200px;
+            flex: 1;
+        }
+
+        /* Chart containers */
+        .chart-container {
+            position: relative;
+            padding: 1rem;
+        }
+
+        /* Projection highlight */
+        .projection-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #6c5ce7;
+        }
+        .confidence-range {
+            font-size: 0.85rem;
+            color: #636e72;
+            font-weight: 600;
+        }
+
+        /* Percentile callouts */
+        .percentile-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.5rem;
+            text-align: center;
+        }
+        .percentile-item .percentile-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #b2bec3;
+        }
+        .percentile-item .percentile-value {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #2d3436;
+        }
+
+        /* No-model message */
+        .no-model-msg {
+            padding: 1.5rem;
+            text-align: center;
+            color: #636e72;
+        }
+        .no-model-msg code {
+            display: block;
+            margin-top: 0.5rem;
+            background: #f0f2f5;
+            padding: 0.5rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 <body>
@@ -346,5 +432,7 @@
     <div class="container">
         {% block content %}{% endblock %}
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    {% block scripts %}{% endblock %}
 </body>
 </html>

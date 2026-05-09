@@ -12,7 +12,7 @@ pip install -r requirements-dev.txt
 python app.py
 
 # Run all unit tests
-python -m pytest test_app.py test_db.py test_analytics.py -v
+python -m pytest test_app.py test_db.py test_analytics.py test_models.py -v
 
 # Run a single test file
 python -m pytest test_app.py -v
@@ -22,6 +22,12 @@ python -m pytest test_app.py -v -k "test_name"
 
 # Load NFL stats data into MongoDB
 python scripts/load_stats.py --years 2024
+
+# Load all data types (seasonal, weekly, schedules, snap counts)
+python scripts/load_stats.py --years 2022 2023 2024 --all
+
+# Train ML models for player projections
+python scripts/train_models.py --seasons 2022 2023 --evaluate-on 2024
 
 # Docker build & run
 docker build -t fantasy-football:latest .
@@ -37,8 +43,11 @@ Flask app with MongoDB (pymongo), Flask-Login auth, and ESPN Fantasy Football AP
 - `db.py` — MongoDB connection factory (`get_db()`) and repository classes (`UserRepository`, `LeagueRepository`). Uses `MONGODB_URI` env var, defaults to `mongodb://localhost:27017/fantasy_football`
 - `models.py` — `User` class wrapping MongoDB docs for Flask-Login's `UserMixin`
 - `analytics/` — NFL stats analysis module:
-  - `data_pipeline.py` — Ingests seasonal/weekly stats from `nfl_data_py` into MongoDB collections (`seasonal_stats`, `weekly_stats`)
+  - `data_pipeline.py` — Ingests seasonal/weekly stats, schedules, and snap counts from `nfl_data_py` into MongoDB
   - `basic_stats.py` — Query functions for rankings, player summaries, roster analysis with start/sit suggestions
+  - `matchup_stats.py` — Defensive rankings, opponent lookup, matchup difficulty ratings
+  - `models.py` — ML models: `PointProjector` (Ridge+RF ensemble), `PlayerClusterer` (K-Means archetypes)
+  - `projections.py` — Projection orchestrator: caching, risk adjustment, Monte Carlo simulation
 
 **Data flow:** Users register, add ESPN league credentials, then view standings/rosters via live ESPN API calls. Analytics features query pre-loaded NFL stats from MongoDB (populated via `scripts/load_stats.py`).
 

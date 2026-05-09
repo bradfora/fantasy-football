@@ -5,14 +5,25 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6c4a445d-a1fb-40d4-9a11-4a3020fe3460" name="Changes" comment="Setup">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/PLAN.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/CLAUDE.md" beforeDir="false" afterPath="$PROJECT_DIR$/CLAUDE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/SCHEMA.md" beforeDir="false" afterPath="$PROJECT_DIR$/SCHEMA.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/TODO.txt" beforeDir="false" afterPath="$PROJECT_DIR$/TODO.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/USER_GUIDE.md" beforeDir="false" afterPath="$PROJECT_DIR$/USER_GUIDE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/analytics/data_pipeline.py" beforeDir="false" afterPath="$PROJECT_DIR$/analytics/data_pipeline.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/db.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docker-compose.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/deploy-k8s.sh" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/deploy-k8s.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/init_db.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/init_db.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/load_stats.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/load_stats.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/analytics.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/analytics.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/base.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/base.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/player_detail.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/player_detail.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_analytics.py" beforeDir="false" afterPath="$PROJECT_DIR$/test_analytics.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_app.py" beforeDir="false" afterPath="$PROJECT_DIR$/test_app.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -113,7 +124,7 @@
       <workItem from="1770583367418" duration="14089000" />
       <workItem from="1770606496354" duration="260000" />
       <workItem from="1770607271730" duration="1646000" />
-      <workItem from="1770609700082" duration="3459000" />
+      <workItem from="1770609700082" duration="14813000" />
     </task>
     <task id="LOCAL-00001" summary="Setup">
       <option name="closed" value="true" />

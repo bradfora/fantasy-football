@@ -3,7 +3,7 @@ import os
 from bson import ObjectId
 from dotenv import load_dotenv
 from espn_api.football import League
-from flask import Flask, render_template, abort, redirect, url_for, request, flash
+from flask import Flask, render_template, abort, redirect, url_for, request, flash, jsonify
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 
 from db import get_db, UserRepository, LeagueRepository
@@ -300,6 +300,179 @@ def team_analytics(league_id, team_id):
         league_doc=league_doc, team=team, analysis=analysis,
         pos_averages=pos_averages, season=season,
     )
+
+
+# --- Projection helpers ---
+
+
+def _get_projection_model():
+    """Lazy-load the PointProjector model from disk."""
+    if not hasattr(app, "_projection_model"):
+        model_path = os.path.join(os.path.dirname(__file__), "models", "point_projector.pkl")
+        if os.path.exists(model_path):
+            from analytics.models import PointProjector
+            model = PointProjector()
+            model.load(model_path)
+            app._projection_model = model
+        else:
+            app._projection_model = None
+    return app._projection_model
+
+
+def _get_player_clusterer(position):
+    """Lazy-load the PlayerClusterer for a given position."""
+    attr = f"_clusterer_{position.lower()}"
+    if not hasattr(app, attr):
+        model_path = os.path.join(
+            os.path.dirname(__file__), "models", f"clusterer_{position.lower()}.pkl"
+        )
+        if os.path.exists(model_path):
+            from analytics.models import PlayerClusterer
+            clusterer = PlayerClusterer()
+            clusterer.load(model_path)
+            setattr(app, attr, clusterer)
+        else:
+            setattr(app, attr, None)
+    return getattr(app, attr)
+
+
+def _get_current_week(db, season):
+    """Find the max week in weekly_stats for the given season."""
+    pipeline = [
+        {"$match": {"season": season}},
+        {"$group": {"_id": None, "max_week": {"$max": "$week"}}},
+    ]
+    result = list(db["weekly_stats"].aggregate(pipeline))
+    if result:
+        return result[0]["max_week"]
+    return 1
+
+
+# --- Projection routes ---
+
+
+@app.route("/leagues/<league_id>/player/<player_id>/projection")
+@login_required
+def player_projection(league_id, player_id):
+    league_doc = _get_user_league(league_id)
+    season = league_doc["espn_year"]
+    db = _get_db()
+
+    from analytics.basic_stats import get_player_summary
+    summary = get_player_summary(db, player_id, season)
+    if not summary:
+        abort(404)
+
+    model = _get_projection_model()
+    current_week = _get_current_week(db, season)
+
+    # Projection data (all None if no model)
+    projection = None
+    remaining = None
+    simulation = None
+    cluster_info = None
+    similar_players = None
+    chart_actual = []
+    chart_projected = []
+
+    if model:
+        from analytics.projections import (
+            get_player_projection, get_remaining_season_projection,
+            run_monte_carlo_simulation,
+        )
+        projection = get_player_projection(
+            db, player_id, season, current_week + 1, model=model
+        )
+        remaining = get_remaining_season_projection(
+            db, player_id, season, current_week, model=model
+        )
+        simulation = run_monte_carlo_simulation(
+            db, player_id, season, current_week, model=model
+        )
+
+        # Build chart data
+        for w in summary.get("weekly", []):
+            chart_actual.append({
+                "week": w["week"],
+                "points": w.get("fantasy_points_ppr", 0) or 0,
+            })
+
+        if remaining and remaining.get("weekly"):
+            for w in remaining["weekly"]:
+                chart_projected.append({
+                    "week": w["week"],
+                    "points": w["projected_points"],
+                    "low": w["confidence_low"],
+                    "high": w["confidence_high"],
+                })
+
+    # Cluster info
+    position = summary.get("position")
+    if position:
+        clusterer = _get_player_clusterer(position)
+        if clusterer:
+            cluster_info = clusterer.classify_player(db, player_id, season)
+            if cluster_info:
+                similar_players = clusterer.get_similar_players(db, player_id, season, limit=5)
+
+    # Matchup for next week
+    next_matchup = None
+    if model:
+        from analytics.matchup_stats import get_upcoming_opponent, get_matchup_difficulty
+        team = summary.get("recent_team")
+        if team and position:
+            opp = get_upcoming_opponent(db, team, season, current_week + 1)
+            if opp:
+                diff = get_matchup_difficulty(db, opp["opponent"], position, season)
+                next_matchup = {
+                    "opponent": opp["opponent"],
+                    "home": opp["home"],
+                    "difficulty": diff,
+                }
+
+    return render_template(
+        "player_projection.html",
+        league_doc=league_doc,
+        player=summary,
+        season=season,
+        current_week=current_week,
+        has_model=model is not None,
+        projection=projection,
+        remaining=remaining,
+        simulation=simulation,
+        cluster_info=cluster_info,
+        similar_players=similar_players,
+        next_matchup=next_matchup,
+        chart_actual=chart_actual,
+        chart_projected=chart_projected,
+    )
+
+
+@app.route("/api/projection/<player_id>")
+@login_required
+def api_projection(player_id):
+    season = request.args.get("season", type=int)
+    week = request.args.get("week", type=int)
+    risk = request.args.get("risk", "medium")
+
+    if risk not in ("conservative", "medium", "aggressive"):
+        return jsonify({"error": "Invalid risk level"}), 400
+
+    if not season or not week:
+        return jsonify({"error": "season and week parameters required"}), 400
+
+    model = _get_projection_model()
+    if not model:
+        return jsonify({"error": "No trained model available"}), 404
+
+    from analytics.projections import get_player_projection
+    result = get_player_projection(
+        _get_db(), player_id, season, week, risk_level=risk, model=model
+    )
+    if result is None:
+        return jsonify({"error": "Could not generate projection"}), 404
+
+    return jsonify(result)
 
 
 if __name__ == "__main__":

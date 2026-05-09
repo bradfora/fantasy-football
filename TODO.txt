@@ -1,2 +1,6 @@
 1. Update documentation
 2. Implement the analytics portion
+3. Deploy to GCP/AWS and Mongo
+4. Create a deployment pipeline
+5. Add weather
+6. Consider additional data sources

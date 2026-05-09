@@ -114,3 +114,38 @@ From a team's roster page, click **Team Analytics** to see a detailed breakdown 
 - **Roster Breakdown** -- every player (starters and bench) with their season points, average per game, last 3 weeks average, trend direction (up/down/steady arrow), and positional rank
 
 The roster analysis cross-references ESPN roster data with the NFL stats database to provide insights. Players not found in the stats database will show ESPN-reported stats only (no trend or positional rank).
+
+### Player Projection Page
+
+From any player detail page, click **View Projections** to access ML-powered projections. This page requires trained models (see below).
+
+**What you'll see:**
+
+- **Performance Projection** -- Next-week projected points with a confidence range, matchup difficulty badge, and projected season total
+- **Risk Slider** -- Adjust between Conservative (floor estimate), Medium (balanced), and Aggressive (ceiling estimate). Moving the slider updates the projected points in real-time
+- **Weekly Scoring & Projection Chart** -- A line chart showing actual weekly scores (solid line) with projected future weeks (dashed line) and a shaded confidence band
+- **Season Outcome Simulation** -- Results of 1,000 Monte Carlo simulations showing the distribution of possible season outcomes, with percentile callouts (P10 through P90), upside probability, and bust risk
+- **Player Archetype** -- K-Means clustering classifies each player into an archetype (e.g. "High-Floor Consistent", "Boom-or-Bust"). A radar chart compares the player's profile to their cluster average, and similar players are listed
+- **Remaining Schedule** -- A table of upcoming opponents with matchup difficulty ratings (easy/medium/hard) and per-week projected points
+
+**Understanding the risk slider:** Conservative shows the lower end of the model's confidence interval (what you can reliably count on), Medium shows the model's best estimate, and Aggressive shows the upper end (the upside scenario).
+
+**Understanding Monte Carlo simulations:** The simulation runs 1,000 possible season outcomes by randomly sampling from the model's confidence intervals. The histogram shows how these outcomes are distributed. P50 (median) is the most likely outcome, P10 is the floor scenario, and P90 is the ceiling.
+
+### Training Projection Models
+
+Projections require trained ML models. If no models are found, the projection page shows a message with instructions.
+
+1. **Load all data** (including schedules and snap counts):
+
+   ```bash
+   python scripts/load_stats.py --years 2022 2023 2024 --all
+   ```
+
+2. **Train the models:**
+
+   ```bash
+   python scripts/train_models.py --seasons 2022 2023 --evaluate-on 2024
+   ```
+
+   This trains the point projection model on 2022-2023 data, evaluates on 2024, and trains player clusterers for each position. Model files are saved to `models/`.
